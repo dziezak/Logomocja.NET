@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Logomocja.Core/Logomocja.Core.csproj" />
+  <Project Path="Logomocja.Language/Logomocja.Language.csproj" />
+  <Project Path="Logomocja.Runtime/Logomocja.Runtime.csproj" />
+  <Project Path="Logomocja.Tests/Logomocja.Tests.csproj" />
+</Solution>
