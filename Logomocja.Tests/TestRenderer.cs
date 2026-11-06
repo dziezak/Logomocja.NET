@@ -380,7 +380,9 @@ public class WorldTests
         var r = new TestRenderer();
         w.Canvas.Render(r);
         Assert.Single(r.Lines);
-        Assert.Empty(w.Turtles);
+        Assert.Throws<TurtleNotFoundException>(() => w.GetTurtle("a"));
+        var remaining = Assert.Single(w.Turtles);
+        Assert.Equal(World.DefaultTurtleNme, remaining.Name);
     }
 
     [Fact]
@@ -397,7 +399,7 @@ public class WorldTests
         var r = new TestRenderer();
         w.Canvas.Render(r);
         var line = Assert.Single(r.Lines);
-        Assertions.Near(new Position(0, 20), line.B);   // została linia żółwia "b"
+        Assertions.Near(new Position(0, 20), line.B);
     }
 
     [Fact]
@@ -420,11 +422,8 @@ public class WorldTests
         var r = new TestRenderer();
         w.Canvas.Render(r);
         Assert.Empty(r.Order);
-        Assert.Empty(w.Turtles);
-        w.CreateTurtle("a");                           // nazwa znowu wolna
+        Assert.Single(w.Turtles);
     }
-
-    // --- Render (wymaga World.Render i IRenderer.DrawTurtle) ---
 
     [Fact]
     public void Render_DrawsTrailsFirstAndTurtlesOnTop()
@@ -437,14 +436,14 @@ public class WorldTests
         var r = new TestRenderer();
         w.Render(r);
 
-        Assert.Equal(new[] { "Line", "Line", "Turtle" }, r.Order);
+        Assert.Equal(new[] { "Line", "Line", "Turtle", "Turtle" }, r.Order);
     }
 
     [Fact]
     public void Render_SkipsInvisibleTurtles()
     {
         var w = new World();
-        w.CreateTurtle("a").IsVisible = false;
+        w.GetTurtle("logi").IsVisible = false;
         w.CreateTurtle("b");
 
         var r = new TestRenderer();
@@ -458,9 +457,8 @@ public class WorldTests
     public void Render_PassesCurrentPositionAndHeadingOfTurtle()
     {
         var w = new World();
-        w.CreateTurtle("a");
-        w.Do("a", t => { t.Right(90); return null; });
-        w.Do("a", t => t.Forward(40));
+        w.Do("logi", t => { t.Right(90); return null; });
+        w.Do("logi", t => t.Forward(40));
 
         var r = new TestRenderer();
         w.Render(r);

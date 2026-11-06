@@ -3,10 +3,18 @@ namespace Logomocja.Core;
 
 public sealed class World
 {
+    public const string DefaultTurtleNme = "logi";
+    
     private readonly Dictionary<string, Turtle> _turtles = new();
-
+    private readonly bool _createDefaultTurtle;
     public Canvas Canvas { get; } = new();
     public IReadOnlyCollection<Turtle> Turtles => _turtles.Values;
+    
+    public World(bool createDefaultTurtle = true)
+    {
+        _createDefaultTurtle = createDefaultTurtle;
+        if (createDefaultTurtle) CreateTurtle(DefaultTurtleNme);
+    }
 
     public Turtle CreateTurtle(string name)
     {
@@ -34,6 +42,7 @@ public sealed class World
     {
         _turtles.Clear();
         Canvas.Clear();
+        if (_createDefaultTurtle) CreateTurtle(DefaultTurtleNme);
     }
 
     public void Render(IRenderer r)
