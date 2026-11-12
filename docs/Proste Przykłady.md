@@ -349,7 +349,7 @@ start {
 
 ---
 
-# Problemy do rozwiązania przez interpreter
+# Problemy 
 ## Ujemny indeks
 ```
 x <- tablica[-1]
