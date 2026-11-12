@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="docs/Moja dokumentacja.md" />
+    <File Path="docs/Przykłady.md" />
+    <File Path="docs/sama_gramatyka.md" />
+    <File Path="docs/language-and-implementation-details.md" />
+  </Folder>
   <Project Path="Logomocja.Core/Logomocja.Core.csproj" />
   <Project Path="Logomocja.Language/Logomocja.Language.csproj" />
   <Project Path="Logomocja.Runtime/Logomocja.Runtime.csproj" />
