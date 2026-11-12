@@ -2,24 +2,26 @@
 ```
 program                 = { definicja_procedury }, główny_blok;
 główny_blok             = "start", blok;
-definicja_procedury     = "oto" , identyfikator , lista_parametrów , blok;
-lista_parametrów        = "(", [identyfikator , { ",", identyfikator } ], ")" ;
+definicja_procedury     = "oto" , identyfikator ,"(" , lista_parametrów ,")", blok;
+lista_parametrów        = [identyfikator , { ",", identyfikator } ] ;
 instrukcja              = przypisanie
 						| instrukcja_warunkowa
+						| instrukcja_run
 						| pętla_powtórz
-						| instrukcja_żółwia
+						| instrukcja_próby
 						| powrót
-						| wywołanie ;
+						| instrukcja_wywołania ;
 						
 przypisanie             = dostęp_do_pamięci, "<-", wyrażenie ;
 dostęp_do_pamięci       = identyfikator , { "[", wyrażenie, "]" };
 
 instrukcja_warunkowa    = "jeżeli" , "(" , wyrażenie, ")" , blok , [ "inaczej" , ( blok | instrukcja_warunkowa ) ] ;
 pętla_powtórz           = "powtórz" ,  "(" , wyrażenie, ")" , blok ;
+instrukcja_próby        = "spróbuj", blok, "złap", "(", identyfikator, ")", blok ;
+instrukcja_wywołania    = wywołanie, { część_metody } | dostęp_do_pamięci, część_metody, { część_metody } ;
 
-instrukcja_żółwia       = "nowy_żółw" , wyrażenie 
-						| "żółw" , "(" , wyrażenie , ")" , "." , identyfikator , "(" , [ lista_argumentów ] , ")" 
-						| "żółw" , "(" , wyrażenie , ")" , "." , "Run" , "(" , ")" , blok ;
+instrukcja_run          = ( wywołanie | dostęp_do_pamięci ), { część_metody }, ".", "Run", "(", ")", blok ;
+część_metody            = ("." | "?." ), identyfikator, "(", [ lista_argumentów ], ")" ;
 
 powrót                  = "wynik" , wyrażenie ;
 blok                    = "{" , { instrukcja } , "}" ;
@@ -27,7 +29,8 @@ lista_argumentów        = wyrażenie , { "," , wyrażenie } ;
 ```
 
 ```
-wyrażenie               = alternatywa ;
+wyrażenie               = domyślna ;
+domyślna                = alternatywa, { "??", alternatywa } ;
 alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
 koniunkcja              = negacja , { "oraz" , negacja } ;
 negacja                 = ["nie"], porównanie ;
@@ -36,10 +39,11 @@ suma                    = iloczyn , { ( "+" | "-" ) , iloczyn } ;
 iloczyn                 = jednoargumentowy , { ( "*" | "/" | "%" ) , jednoargumentowy } ;
 jednoargumentowy        = ["-"] , czynnik ;
 
-czynnik                 = liczba
+czynnik                 = podstawowy, {część_metody};
+podstawowy              = liczba
 						| tekst
 						| tekst_interpolowany
-						| "prawda" | "fałsz"
+						| "prawda" | "fałsz" | "brak"
 						| dostęp_do_pamięci
 						| wywołanie
 						| "(" , wyrażenie , ")" ;
@@ -65,17 +69,33 @@ biały_znak              = " " | "\t" | "\n" | "\r" ;
 ```
 
 ```
-słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" | "nowy_żółw" | "żółw" |  "Run" ;
+słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" ;
 ```
 
 
 
 ```
 start {
-	żółw("kornel").np(100)
-	żółw "kornel"
+	a = żółw("Stefan")
+	y = żółw("Felek", x)
+	z = żółw("Felek1", pos(5, 6), heading, Kolor(0, 0, 0))
+	
+	spróbuj
+	{
+		x = GetŻółw("Stefan")
+	}
+	złap(e){
+		pisz(e)
+	}
+	
+	x.np(100)
+	x.Run()
 	{
 		np(100)
 	}
+	
+	k = 10
+	pisz($"k = {k}")
 }
 ```
+

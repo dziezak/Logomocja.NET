@@ -1,36 +1,38 @@
-
 # BAZA JĘZYKA
 
 ## Podstawa języka
+
 Parę decyzji projektowych:
-1. będziemy mieć tylko 4 podstawowe typy: liczba, tekst, zmienna logiczna oraz żółw.
-2. będziemy mieć typowanie dynamiczne i silne 
-3. Przeciążenie :
-   To zabroni posiadać różnych funkcji o tej samej nazwie ale innej ilości argumentów. ( co uprości język ). Druga definicja procedury o tej samej nazwie będzie zwracać błąd. Jednakże próba zapisu innej zmiennej o tej samej nazwie spowoduje tylko zmianę jej wartości ( bądź typu i wartości). 
+
+1. będziemy mieć 6 podstawowe typy: liczba, tekst, zmienna logiczna, żółw, kolor, pozycja ( pos). Dwa ostatnie są dedykowane pod działanie żółwia. 
+2. będziemy mieć typowanie dynamiczne i silne
+3. Przeciążenie : To zabroni posiadać różnych funkcji o tej samej nazwie ale innej ilości argumentów. ( co uprości język ). Druga definicja procedury o tej samej nazwie będzie zwracać błąd. Jednakże próba zapisu innej zmiennej o tej samej nazwie spowoduje tylko zmianę jej wartości ( bądź typu i wartości).
 
 EBNF podstawa:
 
 ```
 program                 = { definicja_procedury }, główny_blok;
 główny_blok             = "start", blok;
-definicja_procedury     = "oto" , identyfikator , lista_parametrów , blok ;
-lista_parametrów        = "(", [identyfikator , { ",", identyfikator } ], ")" ;
+definicja_procedury     = "oto" , identyfikator ,"(" , lista_parametrów ,")", blok;
+lista_parametrów        = [identyfikator , { ",", identyfikator } ] ;
 instrukcja              = przypisanie
 						| instrukcja_warunkowa
+						| instrukcja_run
 						| pętla_powtórz
-						| instrukcja_żółwia
+						| instrukcja_próby
 						| powrót
-						| wywołanie ;
+						| instrukcja_wywołania ;
 						
 przypisanie             = dostęp_do_pamięci, "<-", wyrażenie ;
 dostęp_do_pamięci       = identyfikator , { "[", wyrażenie, "]" };
 
 instrukcja_warunkowa    = "jeżeli" , "(" , wyrażenie, ")" , blok , [ "inaczej" , ( blok | instrukcja_warunkowa ) ] ;
 pętla_powtórz           = "powtórz" ,  "(" , wyrażenie, ")" , blok ;
+instrukcja_próby        = "spróbuj", blok, "złap", "(", identyfikator, ")", blok ;
+instrukcja_wywołania    = wywołanie, { część_metody } | dostęp_do_pamięci, część_metody, { część_metody } ;
 
-instrukcja_żółwia       = "nowy_żółw" , wyrażenie 
-						| "żółw" , "(" , wyrażenie , ")" , "." , identyfikator , "(" , [ lista_argumentów ] , ")" 
-						| "żółw" , "(" , wyrażenie , ")" , "." , "Run" , "(" , ")" , blok ;
+instrukcja_run          = ( wywołanie | dostęp_do_pamięci ), { część_metody }, ".", "Run", "(", ")", blok ;
+część_metody            = ("." | "?." ), identyfikator, "(", [ lista_argumentów ], ")" ;
 
 powrót                  = "wynik" , wyrażenie ;
 blok                    = "{" , { instrukcja } , "}" ;
@@ -38,7 +40,8 @@ lista_argumentów        = wyrażenie , { "," , wyrażenie } ;
 ```
 
 ```
-wyrażenie               = alternatywa ;
+wyrażenie               = domyślna ;
+domyślna                = alternatywa, { "??", alternatywa } ;
 alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
 koniunkcja              = negacja , { "oraz" , negacja } ;
 negacja                 = ["nie"], porównanie ;
@@ -47,10 +50,11 @@ suma                    = iloczyn , { ( "+" | "-" ) , iloczyn } ;
 iloczyn                 = jednoargumentowy , { ( "*" | "/" | "%" ) , jednoargumentowy } ;
 jednoargumentowy        = ["-"] , czynnik ;
 
-czynnik                 = liczba
+czynnik                 = podstawowy, {część_metody};
+podstawowy              = liczba
 						| tekst
 						| tekst_interpolowany
-						| "prawda" | "fałsz"
+						| "prawda" | "fałsz" | "brak"
 						| dostęp_do_pamięci
 						| wywołanie
 						| "(" , wyrażenie , ")" ;
@@ -64,34 +68,33 @@ operator_porównania     = "=" | "<>" | "<" | ">" | "<=" | ">=" ;
 litera                  = (* a-z, A-Z, ą ć ę ł ń ó ś ź ż oraz wielkie odpowiedniki *) ;
 cyfra                   = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 identyfikator           = litera , { litera | cyfra | "_" } ; (* poza słowami zastrzeżonymi *)
-zmienna                 = identyfikator ;
 liczba                  = cyfra , { cyfra } , [ "." , cyfra , { cyfra } ] ;
 znak_tekstu             = (* dowolny znak oprócz '"' i '\' *) ;
 znak_interpolowany      = (* dowolny znak oprócz '"', '\', '{' i '}' *) ;
-ucieczka                = "\" , ( '"' | "\" | "n" | "t" | "{" | "}" ) ;
+ucieczka                = "\" , ( '"' | "\" | "r" | "n" | "t" | "{" | "}" ) ;
 tekst                   = '"' , { znak_tekstu | ucieczka } , '"' ;
 tekst_interpolowany     = '$"' , { znak_interpolowany | ucieczka | "{" , wyrażenie , "}" } , '"' ;
 
 komentarz               = "#" , { (* dowolny znak oprócz '#' *) } , "#" ;
 biały_znak              = " " | "\t" | "\n" | "\r" ;
 ```
-Nie potrzebne do gramatyki, ale nadal użyteczne:
-```
-słowo_zastrzeżone = "start", "oto", "już", "jeżeli", "inaczej", "powtórz", "wy", "lub", "oraz", "nie", "prawda", "fałsz", "nowy_żółw", "żółw",  "Run" 
-```
 
-#podpowiedź : wowałanie najlepiej aby było słownikiem w implementacji aby mieć wszystkie te funkcje wbudowane
+```
+słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" ;
+```
 
 Uwaga do powtórz:
+
 ```
 powtórz ( <wyrażenie> ) { <instrukcje> }
 ```
-- Wyrażenie jest obliczane raz, przed pierwszym obiegiem (zmiana :n w ciele
-  nie zmienia liczby obiegów).
+
+- Wyrażenie jest obliczane raz, przed pierwszym obiegiem (zmiana :n w ciele nie zmienia liczby obiegów).
 - Wartość musi być liczbą całkowitą nieujemną. 0 oznacza brak obiegów.
 - `wy` w ciele pętli kończy całą procedurę.
 
 przykładowe błędy:
+
 ```
 Błąd typu (linia 6, kol. 9): 'powtórz' oczekuje liczby, otrzymano tekst.
 Błąd wykonania (linia 6, kol. 9): liczba powtórzeń musi być nieujemną liczbą całkowitą, otrzymano 2.5.
@@ -102,15 +105,19 @@ Błąd wykonania (linia 6, kol. 9): liczba powtórzeń musi być nieujemną licz
 ### Funkcje typu void
 
 Składnia:
+
 ```
 oto <nazwa_procedury> (<parametry>) { ... <instrukcje> ... }
 ```
 
 Przykład:
+
 ```
 oto kwadrat() {powtórz(4) { np(40) pw(90) } }
 ```
+
 Odwołanie do zmiennej:
+
 ```
 oto gwiazda(n) {powtórz(5) {np(n) pw(144)} }
 ```
@@ -118,15 +125,18 @@ oto gwiazda(n) {powtórz(5) {np(n) pw(144)} }
 ### Funkcje zwracające wartość
 
 Przykład:
+
 ```
 oto pole (x)
 {
 	wynik x * x
 }
 ```
+
 `wynik` -> mówi, że zwraca wartość jakąś (wynik)
 
 przykład z funkcją:
+
 ```
 oto silnia (n)
 {
@@ -139,34 +149,46 @@ oto silnia (n)
 ```
 
 ## Typy danych
-Robimy typowanie dynamiczne i silne. Jeden zapis `<-` do tworzenia i zmiany zmiennej. 
+
+Robimy typowanie dynamiczne i silne. Jeden zapis `<-` do tworzenia i zmiany zmiennej.
+
 ### Przypisanie wartości
+
 Składnia:
+
 ```
 <dostęp_do_pamięci> <- <wyrażenie>
 ```
-UWAGA: tutaj ważne, że między znakami `<` oraz `-` nie ma spacji 
-przykłady:
+
+UWAGA: tutaj ważne, że między znakami `<` oraz `-` nie ma spacji przykłady:
+
 ```
 jeżeli :x < -10 { ... }       # porównanie (spacja między < a -)#
 jeżeli :x < (-10) { ... }     # też porównanie#
 jeżeli :x<-10 { ... }         # błąd, nie porównanie#
 ```
+
 błąd postaci:
+
 ```
 Błąd składni (linia 3, kol. 9): nieoczekiwane '<-' w wyrażeniu.
 Czy chodziło o porównanie z liczbą ujemną? Napisz 'x < -10' (ze spacją).
 ```
-### Rodzaje typów 
+
+### Rodzaje typów
 
 możliwe typy:
+
 - liczba -> liczba zmienno przecinkowa ( nie ma rozróżnienia w logomocji )
-- tekst -> string 
-- logiczna -> bool 
-- żółw -> ( mój żółw ) 
+- tekst -> string
+- logiczna -> bool
+- żółw -> ( mój żółw )
+- pozycja -> typ trzymający dwie liczby (liczba, liczba)
+- kolor -> typ pod wybieranie koloru
 - tablica -> array #dodatek_jak_bedzie_czas
 
 Powody dlaczego pod powierzchnią liczby będzie double:
+
 - Jedyny typ liczbowy to liczba zmiennoprzecinkowa 64-bitowa (IEEE 754, `double`). Nie ma osobnych liczb całkowitych.
 - Literał to cyfry z opcjonalną częścią ułamkową (`5`, `2.5`), bez znaku i bez zapisu wykładniczego. Minus jest operatorem.
 - Zakres to ok. ±1.8 × 10^308. Liczby całkowite są dokładne do 2^53 (9 007 199 254 740 992), większe mogą być zaokrąglane.
@@ -176,13 +198,17 @@ Powody dlaczego pod powierzchnią liczby będzie double:
 - W interpolacji liczba ma najkrótszy zapis odtwarzający wartość, z kropką dziesiętną i bez `.0` dla całkowitych (`5`, `2.5`).
 
 przykładowe błędy:
+
 ```
 Błąd leksykalny (linia 2, kol. 5): literał liczbowy ma 70 znaków, limit wynosi 64.
 Błąd wykonania (linia 8, kol. 3): dzielenie przez zero.
 Błąd wykonania (linia 9, kol. 10): przepełnienie arytmetyczne (wynik poza zakresem liczby).
 ```
+
 ### Odwołanie do zmiennej
+
 Składnia
+
 ```
 x <- 100
 np(x)
@@ -190,27 +216,32 @@ np(x)
 
 ## Operatory
 
-| Poz. | Operatory                                 | Operandy                                                      | Łączność     |
-| ---- | ----------------------------------------- | ------------------------------------------------------------- | ------------ |
-| 1    | `lub`                                     | logiczne                                                      | lewostronna  |
-| 2    | `oraz`                                    | logiczne                                                      | lewostronna  |
-| 3    | `nie` (jednoargumentowy)                  | logiczna                                                      | prawostronna |
-| 4    | `=` `<>` `<` `>` `<=` `>=`                | dwa takie same typy (`<` `>` `<=` `>=` tylko liczby i teksty) | niełączne    |
-| 5    | `+` `-`                                   | liczby; `+` także tekst + tekst (konkatenacja)                | lewostronna  |
-| 6    | `*` `/` `%`                               | liczby                                                        | lewostronna  |
-| 7    | `-` (jednoargumentowy)                    | liczba                                                        | prawostronna |
-| 8    | nawiasy, literały, `x`, wywołania, `x[i]` |                                                               |              |
-tutaj uwaga: nie będzie operatora `==` Jest to zmiana, którą uważam, za słuszną, ponieważ jest to mylące dla wielu programistów na samym początku ich kariery. 
-Tabela jest uporządkowana od najniższego do najwyższego priorytetu:
-operator z wyższą pozycją wiąże mocniej.
+|Poz.|Operatory|Operandy|Łączność|
+|---|---|---|---|
+|1|`??`|dowolne|lewostronna|
+|2|`lub`|logiczne|lewostronna|
+|3|`oraz`|logiczne|lewostronna|
+|4|`nie` (jednoargumentowy)|logiczna|prawostronna|
+|5|`=` `<>` `<` `>` `<=` `>=`|dwa takie same typy (`<` `>` `<=` `>=` tylko liczby i teksty; `=` i `<>` także z `brak`)|niełączne|
+|6|`+` `-`|liczby; `+` także tekst + tekst (konkatenacja)|lewostronna|
+|7|`*` `/` `%`|liczby|lewostronna|
+|8|`-` (jednoargumentowy)|liczba|prawostronna|
+|9|`.metoda()` `?.metoda()`|wartość z metodami (żółw)|lewostronna|
+|10|nawiasy, literały, `x`, wywołania, `x[i]`|||
+|tutaj uwaga: nie będzie operatora `==` Jest to zmiana, którą uważam, za słuszną, ponieważ jest to mylące dla wielu programistów na samym początku ich kariery.||||
+|Tabela jest uporządkowana od najniższego do najwyższego priorytetu:||||
+|operator z wyższą pozycją wiąże mocniej.||||
+
 ### Priorytety i nawiasy
-`oraz` wiąże mocniej niż `lub` (jak mnożenie i dodawanie), a porównania
-mocniej niż `oraz`. Nawiasy `( )` zmieniają kolejność obliczania.
+
+`oraz` wiąże mocniej niż `lub` (jak mnożenie i dodawanie), a porównania mocniej niż `oraz`. Nawiasy `( )` zmieniają kolejność obliczania.
 
 ```
 x > 1 oraz x < 0 lub y > 0 oraz y < -1
 ```
+
 czyli
+
 ```
 ((x > 1) oraz (x < 0)) lub ((y > 0) oraz (y < -1))
 ```
@@ -221,23 +252,24 @@ a lub b oraz c      ->  a lub (b oraz c)
 nie a = b        ->  nie (a = b)
 ```
 
-Operatory `oraz` oraz `lub` są obliczane leniwie: od lewej do prawej,
-obliczanie kończy się, gdy wynik jest już znany.
+Operatory `oraz` oraz `lub` są obliczane leniwie: od lewej do prawej, obliczanie kończy się, gdy wynik jest już znany.
 
-Przykłady: 
+Przykłady:
 
-| Wejście            | Drzewo                      |
-| ------------------ | --------------------------- |
-| `a lub b oraz c`   | `a lub (b oraz c)`          |
-| `a oraz b lub c`   | `(a oraz b) lub c`          |
-| `a oraz b oraz c`  | `(a oraz b) oraz c`         |
-| `nie a oraz b`     | `(nie a) oraz b`            |
-| `nie a = b`        | `nie (a = b)`               |
-| `(a lub b) oraz c` | nawiasy zmieniają kolejność |
+|Wejście|Drzewo|
+|---|---|
+|`a lub b oraz c`|`a lub (b oraz c)`|
+|`a oraz b lub c`|`(a oraz b) lub c`|
+|`a oraz b oraz c`|`(a oraz b) oraz c`|
+|`nie a oraz b`|`(nie a) oraz b`|
+|`nie a = b`|`nie (a = b)`|
+|`(a lub b) oraz c`|nawiasy zmieniają kolejność|
 
 EBNF:
+
 ```
-wyrażenie               = alternatywa ;
+wyrażenie               = domyślna ;
+domyślna                = alternatywa, { "??", alternatywa } ;
 alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
 koniunkcja              = negacja , { "oraz" , negacja } ;
 negacja                 = ["nie"], porównanie ;
@@ -246,10 +278,11 @@ suma                    = iloczyn , { ( "+" | "-" ) , iloczyn } ;
 iloczyn                 = jednoargumentowy , { ( "*" | "/" | "%" ) , jednoargumentowy } ;
 jednoargumentowy        = ["-"] , czynnik ;
 
-czynnik                 = liczba
+czynnik                 = podstawowy, {część_metody};
+podstawowy              = liczba
 						| tekst
 						| tekst_interpolowany
-						| "prawda" | "fałsz"
+						| "prawda" | "fałsz" | "brak"
 						| dostęp_do_pamięci
 						| wywołanie
 						| "(" , wyrażenie , ")" ;
@@ -259,22 +292,138 @@ wywołanie               = identyfikator , "(" , [ lista_argumentów ], ")";
 operator_porównania     = "=" | "<>" | "<" | ">" | "<=" | ">=" ;
 ```
 
-- Arność procedury użytkownika to liczba parametrów w nagłówku `oto`, arność funkcji wbudowanych pochodzi z rejestru. Oba rodzaje wywołuje się tak samo. 
-- Procedura musi być zdefiniowana przed użyciem (rekurencja jest dozwolona). 
-- Argument to wyrażenie arytmetyczne lub tekstowe (`suma`); wartość logiczną podajemy w nawiasach: f (:a = :b). 
-- Liczby, teksty i wartości logiczne są przekazywane przez wartość, tablice przez referencję. 
+- Arność procedury użytkownika to liczba parametrów w nagłówku `oto`, arność funkcji wbudowanych pochodzi z rejestru. Oba rodzaje wywołuje się tak samo.
+- Procedura musi być zdefiniowana przed użyciem (rekurencja jest dozwolona).
+- Argument to wyrażenie arytmetyczne lub tekstowe (`suma`); wartość logiczną podajemy w nawiasach: f (:a = :b).
+- Liczby, teksty i wartości logiczne są przekazywane przez wartość, tablice przez referencję.
 - Jako instrukcja: zwrócona wartość jest odrzucana. W wyrażeniu: procedura musi zwrócić wartość przez `wy`.
 - Funkcje wbudowane (ruch żółwia, `pisz` itd.) są zwykłymi wywołaniami, gramatyka ich nie wyróżnia
 
 Przykładowe błędy:
+
 ```
 Błąd składni (linia 3, kol. 5): nieznana procedura 'kwadrat2'.
 Błąd składni (linia 4, kol. 10): 'f' wymaga 2 argumentów, podano 1.
 Błąd wykonania (linia 7, kol. 12): procedura 'kwadrat' nie zwróciła wartości.
 ```
+
+## Pozycja i kolor
+
+`pozycja` i `kolor` to dwa niezmienne typy wartości. Nie mają własnej składni literałów. Tworzy się je wywołaniami `pos` i `Kolor`, a zapisane w zmiennej zachowują się jak liczba czy tekst: są przekazywane przez wartość, a ich zmiana polega na utworzeniu nowej wartości.
+
+### Pozycja
+
+Pozycja to punkt (x, y) na płótnie. Układ współrzędnych jest ten sam co dla żółwia: (0, 0) w środku, oś Y do góry.
+
+```
+pos(<x>, <y>)
+```
+
+- Argumenty to dwie liczby (dowolne rzeczywiste, także ujemne).
+- Zwraca ją metoda żółwia `pozycja()`, a przyjmuje ją konstruktor `żółw(nazwa, pozycja, kierunek, kolor)`.
+- Pozycje można porównywać przez `=` i `<>` (po wartości: `pos(1, 2) = pos(1, 2)` daje `prawda`). Operatory `<`, `>`, `<=`, `>=` oraz arytmetyka są błędem typu.
+- W interpolacji pozycja ma zapis `(x, y)`, np. `$"{pos(50, 0)}"` daje `(50, 0)`. Liczby mają ten sam format co w interpolacji liczby.
+
+```
+start {
+    p <- pos(50, 0)
+    pisz($"start: {p}")                 # start: (50, 0) #
+    jeżeli (p = pos(50, 0)) { pisz("ta sama pozycja") }
+}
+```
+
+### Kolor
+
+Kolor to trzy składowe: czerwona, zielona i niebieska.
+
+```
+Kolor(<r>, <g>, <b>)
+```
+
+- Każda składowa to liczba całkowita od 0 do 255. Zły typ to błąd typu, wartość spoza zakresu lub niecałkowita to błąd wykonania.
+- Zwraca go metoda żółwia `kolor()`, a przyjmuje go konstruktor `żółw(...)`.
+- Kolory można porównywać przez `=` i `<>` po wartości. Pozostałe operatory to błąd typu.
+- W interpolacji kolor ma zapis `(r, g, b)`, np. `$"{Kolor(255, 0, 0)}"` daje `(255, 0, 0)`.
+- `kolor_pisaka`, `kolor_wypełnienia` i `kolor_tła` biorą osobne liczby r, g, b, a nie wartość typu `kolor`.
+
+```
+start {
+    czerwony <- Kolor(255, 0, 0)
+    bartek <- żółw("Bartek", pos(50, 0), 90, czerwony)
+    jeżeli (bartek.kolor() = czerwony) { pisz("czerwony") }
+}
+```
+
+### Błędy
+
+```
+Błąd typu (linia 2, kol. 9): 'pos' oczekuje liczby, otrzymano tekst.
+Błąd typu (linia 4, kol. 12): nie można porównać pozycji z kolorem.
+Błąd typu (linia 5, kol. 14): operator '<' nie działa na pozycjach.
+Błąd wykonania (linia 3, kol. 5): składowa koloru musi być liczbą całkowitą 0-255, otrzymano 300.
+```
+## Brak, `??` i `?.`
+
+### Wartość `brak`
+
+`brak` oznacza nieobecność wartości. Zwraca ją na przykład `GetŻółw`, gdy żółw nie istnieje, a procedura może ją zwrócić jawnie (`wynik brak`). To osobna wartość, a nie piąty typ.
+
+- `=` i `<>` porównują `brak` z wartością dowolnego typu (to jedyny wyjątek od reguły "dwa takie same typy"): `ż = brak` daje `prawda` tylko dla `brak`.
+- W pozostałych operacjach (`+`, `<`, `nie`, warunek `jeżeli` itd.) `brak` to błąd typu.
+- Procedura, która zakończyła się bez `wynik`, użyta w wyrażeniu to błąd wykonania ("nie zwróciła wartości"). `wynik brak` jest poprawną wartością.
+
+### Operator `??` (wartość domyślna)
+
+Składnia: `a ?? b`. Jeśli `a` nie jest `brak`, wynikiem jest `a`. W przeciwnym razie wynikiem jest `b`.
+
+- Ma najniższy priorytet, niższy niż `lub`, a łączy się lewostronnie: `a ?? b ?? c` to `(a ?? b) ?? c`, czyli pierwsza wartość różna od `brak`.
+- Jest obliczany leniwie: prawa strona jest obliczana tylko wtedy, gdy lewa jest `brak`.
+- Ponieważ obejmuje całe wyrażenia po obu stronach, porównanie wyniku trzeba ująć w nawiasy: `a ?? b = c` to `a ?? (b = c)`, a `(a ?? b) = c` jest tym, o co zwykle chodzi.
+- Po `??` może stać liczba ujemna: `podziel(10, 0) ?? -1`.
+
+```
+oto bezpieczna_pozycja(imię) {
+    ż <- GetŻółw(imię)
+    wynik ż?.pozycja() ?? pos(0, 0)
+}
+
+start {
+    nazwa_obcego <- GetŻółw("Bob")?.nazwa() ?? "nieznany"
+    pisz(nazwa_obcego)                                     # nieznany #
+
+    jeżeli ((GetŻółw("Ala")?.pozycja() ?? pos(0, 0)) = pos(0, 0)) {
+        pisz("w punkcie startu")
+    }
+}
+```
+
+### Operator `?.` (bezpieczne wywołanie metody)
+
+Składnia: `a?.metoda(argumenty)`. Jeśli `a` jest `brak`, całe wywołanie daje `brak` i nic się nie wykonuje (argumenty nie są obliczane). W przeciwnym razie działa jak zwykłe `a.metoda(argumenty)`.
+
+- Zwykła kropka na `brak` to błąd wykonania, a `?.` ten błąd zamienia na wynik `brak`.
+- Jeśli łańcuch ma więcej wywołań (`a?.f().g()`), to gdy `a` jest `brak`, pomijana jest cała reszta łańcucha. Wynikiem całości jest `brak`.
+- `?.` wolno użyć jako instrukcji: `felek?.np(10)` nie robi nic, gdy `felek` to `brak`.
+- `?.` dotyczy tylko wywołań metod. Nie ma wariantu dla `Run` ani dla indeksowania.
+- `?.` na wartości, która ma wartość, ale nie jest żółwiem (np. liczbie), to nadal błąd typu. Chroni tylko przed `brak`.
+
+```
+start {
+    felek <- GetŻółw("Felek")
+    felek?.np(10)
+
+    cel <- felek?.pozycja() ?? pos(0, 0)
+    kolor <- felek?.kolor() ?? Kolor(0, 0, 0)
+    pisz($"cel = {cel}, kolor = {kolor}")
+
+    jeżeli (felek?.nazwa() = "Ala") { pisz("to Ala") }   # brak = "Ala" daje fałsz #
+}
+```
+
 ## If-ologia
 
 Pisanie operacji warunkowych:
+
 ```
 jeżeli (<warunek>) {<instrukcje>}
 
@@ -288,26 +437,28 @@ jeżeli (<warunek> oraz <warunek>) {<instrukcje>}
 ```
 
 ## Komentarze + Terminale
+
 - Komentarz zaczyna się od `#`, a kończy na następnym `#`. Może obejmować kilka linii.
 - Nie można ich zagnieżdżać (pierwszy `#` po otwarciu zamyka komentarz).
 - `#` wewnątrz tekstu w cudzysłowie nie jest komentarzem.
-- Lekser pomija komentarz i nie zwraca tokenu. 
+- Lekser pomija komentarz i nie zwraca tokenu.
 
 jeżeli na koniec pliku będzie niezamknięty komentarz to dostajemy błąd:
+
 ```
 Błąd leksykalny (linia 4, kol. 3): niezamknięty komentarz rozpoczęty tutaj, brakuje zamykającego '#'.
 ```
 
 Teraz posiadamy już wszystko aby napisać terminale do składni języka EBNF:
+
 ```
 litera                  = (* a-z, A-Z, ą ć ę ł ń ó ś ź ż oraz wielkie odpowiedniki *) ;
 cyfra                   = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 identyfikator           = litera , { litera | cyfra | "_" } ; (* poza słowami zastrzeżonymi *)
-zmienna                 = identyfikator ;
 liczba                  = cyfra , { cyfra } , [ "." , cyfra , { cyfra } ] ;
 znak_tekstu             = (* dowolny znak oprócz '"' i '\' *) ;
 znak_interpolowany      = (* dowolny znak oprócz '"', '\', '{' i '}' *) ;
-ucieczka                = "\" , ( '"' | "\" | "n" | "t" | "{" | "}" ) ;
+ucieczka                = "\" , ( '"' | "\" | "r" | "n" | "t" | "{" | "}" ) ;
 tekst                   = '"' , { znak_tekstu | ucieczka } , '"' ;
 tekst_interpolowany     = '$"' , { znak_interpolowany | ucieczka | "{" , wyrażenie , "}" } , '"' ;
 
@@ -315,56 +466,145 @@ komentarz               = "#" , { (* dowolny znak oprócz '#' *) } , "#" ;
 biały_znak              = " " | "\t" | "\n" | "\r" ;
 ```
 
-## Operacje żółwia ( identyfikatory w EBNF)
-Zostały same operacje żółwia. Tutaj podzielimy je na operacje związane z żółwiem oraz na niezwiązane z żółwiem. Jeżeli nie będzie zadeklarowany żółw przed operacją to będzie ją wykonywał podstawowy żółw "logi":
+## Żółwie
 
-| Funkcja                         | Arg. | Typy               | Działanie (Core)                                                   |
-| ------------------------------- | ---- | ------------------ | ------------------------------------------------------------------ |
-| `naprzód` (`np`)                | 1    | liczba             | `Forward(d)`; ujemna wartość cofa żółwia bez zmiany kierunku       |
-| `prawo` (`pw`)                  | 1    | liczba             | `Right(stopnie)`                                                   |
-| `lewo` (`lw`)                   | 1    | liczba             | `Left(stopnie)`                                                    |
-| `idź_do`                        | 2    | liczba x, liczba y | `SetPosition`, rysuje linię, gdy pisak opuszczony                  |
-| `ustaw_kierunek`                | 1    | liczba             | `SetHeading` (0 = góra, rośnie zgodnie z ruchem wskazówek zegara)  |
-| `środek`                        | 0    | –                  | `Home()`: do (0,0), kierunek 0, rysuje linię, gdy pisak opuszczony |
-| `podnieś_pisak` / `opuść_pisak` | 0    | –                  | `IsPenDown = false` / `true`                                       |
-| `kolor_pisaka`                  | 3    | liczby r, g, b     | `PenColor`                                                         |
-| `kolor_wypełnienia`             | 3    | liczby r, g, b     | `FillColor`                                                        |
-| `grubość`                       | 1    | liczba > 0         | `PenSize`                                                          |
-| `ukryj_żółwia` / `pokaż_żółwia` | 0    | –                  | `IsVisible`                                                        |
-| `okrąg`                         | 1    | liczba > 0         | `Circle(r)`, środek w bieżącej pozycji, kolor i grubość pisaka     |
-| `początek_wypełnienia`          | 0    | –                  | `BeginFill()`                                                      |
-| `koniec_wypełnienia`            | 0    | –                  | `EndFill()`, wielokąt powstaje przy co najmniej 3 punktach         |
-| `poz_x`, `poz_y`, `kierunek`    | 0    | –                  | zwracają liczbę: `Pos.X`, `Pos.Y`, `Heading`                       |
+Żółw to wartość jednego z czterech podstawowych typów. Każdy żółw ma nazwę (unikalną w całym programie), pozycję, kierunek, kolor i grubość pisaka, stan pisaka (opuszczony lub podniesiony) oraz widoczność. Wszystkie żółwie rysują na jednym wspólnym płótnie. Zawsze istnieje żółw domyślny `logi` (pozycja (0, 0), kierunek 0, czarny pisak opuszczony).
 
-Niezależne operacje od aktywnego żółwia:
+Żółwie są przekazywane przez referencję: po `b <- a` obie zmienne wskazują tego samego żółwia, a procedura, która dostaje żółwia w parametrze, porusza oryginał. Konwersji na typ żółw ani z niego nie ma.
 
-| Funkcja       | Arg. | Typy           | Działanie                                                      |
-| ------------- | ---- | -------------- | -------------------------------------------------------------- |
-| `nowy_żółw`   | 1    | tekst          | `World.CreateTurtle(nazwa)`, duplikat to błąd                  |
-| `usuń_żółwia` | 1    | tekst          | `RemoveTurtle(nazwa, keepDrawings: true)`, brak żółwia to błąd |
-| `wyczyść`     | 0    | –              | `Canvas.Clear()`                                               |
-| `kolor_tła`   | 3    | liczby r, g, b | `Canvas.Background`                                            |
-| `pisz`        | 1    | tekst          | wypisuje wartość w osobnej linii na wyjście programu           |
-| `liczba`      | 1    | tekst          | zamienia na liczbę, błąd, gdy tekst nie jest liczbą            |
+### Tworzenie i pobieranie żółwi
 
-### Wypisywanie zmiennych 
+|Wywołanie|Zwraca|Działanie|
+|---|---|---|
+|`żółw(nazwa)`|żółw|nowy żółw w (0, 0), kierunek 0, czarny pisak; powtórzona nazwa to błąd wykonania|
+|`żółw(nazwa, pozycja, kierunek, kolor)`|żółw|pełna forma: `pozycja` to `pos(x, y)`, `kierunek` to liczba (jak w `ustaw_kierunek`), `kolor` to `Kolor(r, g, b)`|
+|`GetŻółw(nazwa)`|żółw albo `brak`|szuka żółwia po nazwie; gdy nie istnieje, zwraca `brak` (nie zgłasza błędu)|
+|`usuń_żółwia(nazwa)`|–|usuwa żółwia, jego rysunki zostają; brak żółwia to błąd wykonania|
+|`pos(x, y)`|pozycja|punkt na płótnie|
+|`Kolor(r, g, b)`|kolor|składowe 0-255, inaczej błąd wykonania|
+
+```
+start {
+    ala <- żółw("Ala")
+    bartek <- żółw("Bartek", pos(50, 0), 90, Kolor(255, 0, 0))
+    felek <- GetŻółw("Felek")      # brak, jeśli nie ma takiego żółwia #
+}
+```
+
+### Jak wydać polecenie żółwiowi
+
+Są trzy sposoby:
+
+1. **Bez wskazania żółwia.** Polecenie wykonuje żółw aktywny, a poza blokiem `Run` jest nim `logi`: `np(100)`.
+2. **Jako metoda.** Polecenie wykonuje wskazany żółw: `ala.np(100)`. Wskazać można zmienną, wywołanie lub element tablicy. Wariant `?.` opisuje sekcja "Brak, `??` i `?.`".
+3. **W bloku `Run`.** Wszystkie polecenia bez wskazania żółwia w bloku wykonuje ten żółw:
+
+```
+oto wielokąt(ż, boki, długość) {
+    powtórz(boki) {
+        ż.np(długość)
+        ż.pw(360 / boki)
+    }
+}
+
+start {
+    ala <- żółw("Ala")
+    bartek <- żółw("Bartek", pos(50, 0), 90, Kolor(255, 0, 0))
+
+    wielokąt(ala, 5, 80)       # przez parametr i metody #
+    wielokąt(bartek, 3, 60)
+
+    bartek.Run() {             # przez blok Run #
+        powtórz(8) {
+            np(40)
+            pw(45)
+        }
+    }
+}
+```
+
+Zasady bloku `Run`:
+
+- Składnia to `<żółw>.Run() { ... }`. Blok nie tworzy własnego zasięgu zmiennych (jak każdy blok).
+- Po wyjściu z bloku aktywny jest znowu poprzedni żółw. Bloki można zagnieżdżać.
+- Aktywny żółw obowiązuje też w procedurach wywołanych z bloku, jeśli polecenia w nich nie wskazują żółwia.
+- `Run` występuje tylko z `.`; `?.Run()` jest błędem składniowym. Gdy żółw może nie istnieć, trzeba sprawdzić `jeżeli (ż = brak) { ... }`.
+- `Run` na wartości `brak` to błąd wykonania, a na wartości, która nie jest żółwiem, błąd typu.
+
+### Polecenia żółwia
+
+Każde polecenie z tabeli działa jako funkcja (na żółwiu aktywnym) i jako metoda (`ż.np(10)`).
+
+|Polecenie|Arg.|Typy|Działanie (Core)|
+|---|---|---|---|
+|`naprzód` (`np`)|1|liczba|`Forward(d)`; ujemna wartość cofa żółwia bez zmiany kierunku|
+|`prawo` (`pw`)|1|liczba|`Right(stopnie)`|
+|`lewo` (`lw`)|1|liczba|`Left(stopnie)`|
+|`idź_do`|2|liczba x, liczba y|`SetPosition`, rysuje linię, gdy pisak opuszczony|
+|`ustaw_kierunek`|1|liczba|`SetHeading` (0 = góra, rośnie zgodnie z ruchem wskazówek zegara)|
+|`środek`|0|–|`Home()`: do (0,0), kierunek 0, rysuje linię, gdy pisak opuszczony|
+|`podnieś_pisak` / `opuść_pisak`|0|–|`IsPenDown = false` / `true`|
+|`kolor_pisaka`|3|liczby r, g, b|`PenColor`|
+|`kolor_wypełnienia`|3|liczby r, g, b|`FillColor`|
+|`grubość`|1|liczba > 0|`PenSize`|
+|`ukryj_żółwia` / `pokaż_żółwia`|0|–|`IsVisible`|
+|`okrąg`|1|liczba > 0|`Circle(r)`, środek w bieżącej pozycji, kolor i grubość pisaka|
+|`początek_wypełnienia`|0|–|`BeginFill()`|
+|`koniec_wypełnienia`|0|–|`EndFill()`, wielokąt powstaje przy co najmniej 3 punktach|
+
+Metody pytające (zwracają wartość):
+
+|Metoda|Zwraca|Działanie|
+|---|---|---|
+|`nazwa()`|tekst|nazwa żółwia|
+|`pozycja()`|pozycja|`Pos`|
+|`kolor()`|kolor|kolor pisaka (`PenColor`)|
+|`poz_x()`, `poz_y()`|liczba|`Pos.X`, `Pos.Y`|
+|`kierunek()`|liczba|`Heading`|
+
+### Błędy związane z żółwiami
+
+```
+Błąd wykonania (linia 4, kol. 5): żółw 'Ala' już istnieje.
+Błąd wykonania (linia 7, kol. 6): metoda 'np' wywołana na wartości 'brak'. Czy chodziło o '?.'?
+Błąd wykonania (linia 9, kol. 3): usuń_żółwia: nie ma żółwia 'Ola'.
+Błąd typu (linia 3, kol. 7): 'x' nie jest żółwiem, otrzymano liczba.
+```
+
+### Funkcje niezależne od żółwia
+
+|Funkcja|Arg.|Typy|Działanie|
+|---|---|---|---|
+|`wyczyść`|0|–|`Canvas.Clear()`|
+|`kolor_tła`|3|liczby r, g, b|`Canvas.Background`|
+|`pisz`|1|tekst|wypisuje wartość w osobnej linii na wyjście programu|
+|`liczba`|1|tekst|zamienia na liczbę, błąd, gdy tekst nie jest liczbą|
+
+### Wypisywanie zmiennych
+
 Przykład:
+
 ```
 x <- 5
 pisz($"x = {x}") # x = 5 #
 pisz($"suma: {x + 1}, parzyste: {x % 2 = 0}") # suma: 6, parzyste: fałsz #
 pisz("koniec")
 ```
-dla 
+
+dla
+
 ```
 pisz($"{x}")
 ```
+
 zwracany jest błąd:
+
 ```
   Błąd typu (linia 3, kol. 6): 'pisz' oczekuje tekstu, otrzymano liczba. Użyj pisz($"{x}").
 ```
 
-## Zasięg zmiennych 
+## Zasięg zmiennych
+
 - Program główny ma zmienne globalne, a każde wywołanie procedury ma własne zmienne lokalne.
 - Procedura widzi tylko swoje parametry i zmienne lokalne. Nie widzi zmiennych globalnych ani zmiennych wywołującego, więc dane przekazujemy przez parametry.
 - `x <- wartość` zmienia zmienną o tej nazwie w bieżącym zasięgu, a jeśli jej nie ma, tworzy ją.
@@ -373,6 +613,7 @@ zwracany jest błąd:
 - Przykrywanie zmiennych nie występuje: zmienna lokalna i globalna o tej samej nazwie są niezależne, bo procedura nie widzi globalnych.
 - Odczyt zmiennej, która nie została wcześniej przypisana, to błąd wykonania.
 - Zmienna i procedura mogą mieć tę samą nazwę, bo zmienną zawsze zapisujemy jako `x` albo `x <-`, a procedurę wywołujemy samą nazwą.
+- `spróbuj` i `złap` też nie tworzą zasięgu (patrz "Obsługa błędów w programie").
 
 ```
 limit <- 10
@@ -382,24 +623,29 @@ oto f ()
 }
 pisz $"{f}"
 ```
+
 tutaj jest inny zasięg więc dostajemy błąd:
+
 ```
 Błąd wykonania (linia 3, kol. 6): nieznana zmienna 'limit'.
 ```
 
-## Białe znaki 
+## Białe znaki
+
 Spacje, tabulatory i nowe linie rozdzielają tokeny i poza tym nie mają znaczenia: poza tekstem w cudzysłowie i komentarzem są ignorowane. Instrukcje nie mają separatorów (ani średnika, ani końca linii jako końca instrukcji), więc `np 10 pw 90` i zapis w dwóch liniach znaczą to samo.
 
 Jedyny wyjątek: `$"`, `<-`, `<=`, `<>` oraz `:x` są pojedynczymi tokenami i nie mogą mieć spacji w środku. Dlatego `x<-10`, `x <-10` i `x<- 10` są przypisaniami, a `x < -10` porównaniem.
 
 ## Konwertowanie typów
-| z \ na   | liczba                | tekst                            | logiczna | tablica |
-| -------- | --------------------- | -------------------------------- | -------- | ------- |
-| liczba   | –                     | interpolacja `$"{x}"`            | brak     | brak    |
-| tekst    | funkcja `liczba "12"` | –                                | brak     | brak    |
-| logiczna | brak                  | interpolacja (`prawda`, `fałsz`) | –        | brak    |
-| tablica  | brak                  | brak                             | brak     | –       |
-"Brak" oznacza, że konwersji nie ma, a próba użycia takiej wartości w innym miejscu to błąd typu.
+
+| z \ na   | liczba                 | tekst                            | logiczna | pozycja | kolor  | tablica |
+| -------- | ---------------------- | -------------------------------- | -------- | ------- | ------ | ------- |
+| liczba   | –                      | interpolacja `$"{x}"`            | nie ma   | nie ma  | nie ma | nie ma  |
+| tekst    | funkcja `liczba("12")` | –                                | nie ma   | nie ma  | nie ma | nie ma  |
+| logiczna | nie ma                 | interpolacja (`prawda`, `fałsz`) | –        | nie ma  | nie ma | nie ma  |
+| pozycja  | nie ma                 | interpolacja (`(50, 0)`)         | nie ma   | –       | nie ma | nie ma  |
+| kolor    | nie ma                 | interpolacja (`(255, 0, 0)`)     | nie ma   | nie ma  | –      | nie ma  |
+| tablica  | nie ma                 | nie ma                           | nie ma   | nie ma  | nie ma | –       |
 
 - Interpolacja jest jedyną konwersją na tekst. Liczba ma najkrótszy zapis odtwarzający wartość (`5`, `2.5`), wartość logiczna to `prawda` lub `fałsz`, tekst zostaje bez zmian.
 - `liczba "<tekst>"` przyjmuje opcjonalny minus, cyfry i opcjonalną część ułamkową (`"12"`, `"-3.5"`). Wszystko inne (`""`, `" 5"`, `"1e3"`, `"abc"`) to błąd wykonania.
@@ -409,41 +655,49 @@ Jedyny wyjątek: `$"`, `<-`, `<=`, `<>` oraz `:x` są pojedynczymi tokenami i ni
 
 Dozwolone typy operandów:
 
-|Konstrukcja|Dozwolone typy|Wynik|Inne kombinacje|
-|---|---|---|---|
-|`+`|liczba + liczba, tekst + tekst|liczba, tekst|błąd typu|
-|`-` `*` `/` `%`|liczba, liczba|liczba|błąd typu|
-|`-` (jednoargumentowy)|liczba|liczba|błąd typu|
-|`<` `>` `<=` `>=`|liczba, liczba albo tekst, tekst (teksty porównywane kodami znaków, bez wpływu ustawień regionalnych)|logiczna|błąd typu|
-|`=` `<>`|dwie wartości tego samego typu: liczba, tekst albo logiczna|logiczna|różne typy lub tablice: błąd typu|
-|`nie`|logiczna|logiczna|błąd typu|
-|`oraz` `lub`|logiczna, logiczna (prawy operand tylko, gdy jest obliczany)|logiczna|błąd typu|
-|warunek w `jeżeli`|logiczna|–|błąd typu|
-|liczba powtórzeń w `powtórz`|liczba całkowita nieujemna|–|zły typ: błąd typu, zła wartość: błąd wykonania|
-|nazwa w `żółw`|tekst|–|błąd typu|
-|`t[i]`|`t`: tablica, `i`: liczba całkowita nieujemna|element|zły typ: błąd typu, zła wartość: błąd wykonania|
-|`{ ... }` w interpolacji|liczba, tekst, logiczna|tekst|tablica: błąd typu|
-|argumenty funkcji wbudowanych|według tabel funkcji|według tabel|błąd typu|
+| Konstrukcja                              | Dozwolone typy                                                                                                                      | Wynik                                     | Inne kombinacje                                       |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- |
+| `+`                                      | liczba + liczba, tekst + tekst                                                                                                      | liczba, tekst                             | błąd typu                                             |
+| `-` `*` `/` `%`                          | liczba, liczba                                                                                                                      | liczba                                    | błąd typu                                             |
+| `-` (jednoargumentowy)                   | liczba                                                                                                                              | liczba                                    | błąd typu                                             |
+| `<` `>` `<=` `>=`                        | liczba, liczba albo tekst, tekst (teksty porównywane kodami znaków, bez wpływu ustawień regionalnych)                               | logiczna                                  | błąd typu (także dla pozycji i kolorów)               |
+| `=` `<>`                                 | dwie wartości tego samego typu: liczba, tekst, logiczna, pozycja albo kolor (porównanie po wartości), albo dowolna wartość z `brak` | logiczna                                  | różne typy (poza `brak`), żółw lub tablica: błąd typu |
+| `nie`                                    | logiczna                                                                                                                            | logiczna                                  | błąd typu                                             |
+| `oraz` `lub`                             | logiczna, logiczna (prawy operand tylko, gdy jest obliczany)                                                                        | logiczna                                  | błąd typu                                             |
+| `??`                                     | dowolne, dowolne (prawy operand tylko, gdy lewy jest `brak`)                                                                        | lewy operand, a gdy jest `brak`, prawy    | brak błędów typu                                      |
+| `.metoda()`                              | żółw                                                                                                                                | wynik metody                              | `brak`: błąd wykonania; inny typ: błąd typu           |
+| `?.metoda()`                             | żółw albo `brak` (argumenty obliczane tylko, gdy lewy operand nie jest `brak`)                                                      | wynik metody, a dla `brak` wartość `brak` | inny typ niż żółw i `brak`: błąd typu                 |
+| `<żółw>.Run() { ... }`                   | żółw                                                                                                                                | –                                         | `brak`: błąd wykonania; inny typ: błąd typu           |
+| warunek w `jeżeli`                       | logiczna                                                                                                                            | –                                         | błąd typu                                             |
+| liczba powtórzeń w `powtórz`             | liczba całkowita nieujemna                                                                                                          | –                                         | zły typ: błąd typu, zła wartość: błąd wykonania       |
+| nazwa w `żółw`, `GetŻółw`, `usuń_żółwia` | tekst                                                                                                                               | –                                         | błąd typu                                             |
+| `pos(x, y)`                              | liczba, liczba                                                                                                                      | pozycja                                   | błąd typu                                             |
+| `Kolor(r, g, b)`                         | liczba 0-255, liczba 0-255, liczba 0-255                                                                                            | kolor                                     | zły typ: błąd typu, zła wartość: błąd wykonania       |
+| pozycja, kierunek i kolor w `żółw(...)`  | `pozycja`, liczba, `kolor`                                                                                                          | żółw                                      | błąd typu                                             |
+| `t[i]`                                   | `t`: tablica, `i`: liczba całkowita nieujemna                                                                                       | element                                   | zły typ: błąd typu, zła wartość: błąd wykonania       |
+| `{ ... }` w interpolacji                 | liczba, tekst, logiczna, pozycja, kolor                                                                                             | tekst                                     | tablica, żółw, `brak`: błąd typu                      |
+| argumenty funkcji wbudowanych            | według tabel funkcji                                                                                                                | według tabel                              | błąd typu                                             |
 
 ## Rodzaje błędów
 
 Format komunikatu: `Błąd <rodzaj> (linia L, kol. K): opis`, a po nim opcjonalnie linia z podpowiedzią. Linie i kolumny są liczone od 1. Komunikaty trafiają na standardowe wyjście błędów, a `pisz` na standardowe wyjście.
 
-| Rodzaj     | Zgłasza          | Co wykrywa                                                                                                                                                                                                                                                          | Co się dzieje                                      |
-| ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| leksykalny | lekser           | niezamknięty tekst lub komentarz, nieznany znak, zła sekwencja ucieczki, literał liczbowy ponad limit, identyfikator lub tekst ponad limit długości                                                                                                                 | zatrzymanie na pierwszym błędzie, bez uruchomienia |
-| składniowy | parser           | zła struktura (brak `{`, `}`, `)`, ), `inaczej` bez `jeżeli`, `oto` w bloku, `wynik` poza procedurą, przekroczone zagnieżdżenie oraz kontrola nazw i arności: nieznana procedura, zła liczba argumentów, powtórzona definicja, nazwa wbudowana jako nazwa procedury | zatrzymanie na pierwszym błędzie, bez uruchomienia |
-| typu       | interpreter      | operacja na wartości niewłaściwego typu                                                                                                                                                                                                                             | przerwanie programu w tym miejscu                  |
-| wykonania  | interpreter      | dzielenie przez zero, przepełnienie, nieznana zmienna, indeks poza zakresem lub niecałkowity, procedura bez wartości, przekroczona głębokość wywołań, nieistniejący lub powtórzony żółw, kolor poza zakresem, tekst nie jest liczbą, zły rozmiar tablicy            | przerwanie programu w tym miejscu                  |
-| wejścia    | uruchamiacz      | brak pliku, brak uprawnień do odczytu                                                                                                                                                                                                                               | komunikat, bez uruchomienia                        |
-| wewnętrzny | najwyższy poziom | nieoczekiwany wyjątek w interpreterze (błąd w naszym kodzie)                                                                                                                                                                                                        | komunikat, to się nie powinno zdarzać              |
+|Rodzaj|Zgłasza|Co wykrywa|Co się dzieje|
+|---|---|---|---|
+|leksykalny|lekser|niezamknięty tekst lub komentarz, nieznany znak, zła sekwencja ucieczki, literał liczbowy ponad limit, identyfikator lub tekst ponad limit długości|zatrzymanie na pierwszym błędzie, bez uruchomienia|
+|składniowy|parser|zła struktura (brak `{`, `}`, `)`, ), `inaczej` bez `jeżeli`, `oto` w bloku, `wynik` poza procedurą, przekroczone zagnieżdżenie oraz kontrola nazw i arności: nieznana procedura, zła liczba argumentów, powtórzona definicja, nazwa wbudowana jako nazwa procedury|zatrzymanie na pierwszym błędzie, bez uruchomienia|
+|typu|interpreter|operacja na wartości niewłaściwego typu|przerwanie programu w tym miejscu, chyba że w `spróbuj`|
+|wykonania|interpreter|dzielenie przez zero, przepełnienie, nieznana zmienna, indeks poza zakresem lub niecałkowity, procedura bez wartości, przekroczona głębokość wywołań, nieistniejący lub powtórzony żółw, kolor poza zakresem, tekst nie jest liczbą, zły rozmiar tablicy|przerwanie programu w tym miejscu, chyba że w `spróbuj`|
+|wejścia|uruchamiacz|brak pliku, brak uprawnień do odczytu|komunikat, bez uruchomienia|
+|wewnętrzny|najwyższy poziom|nieoczekiwany wyjątek w interpreterze (błąd w naszym kodzie)|komunikat, to się nie powinno zdarzać|
 
 - Lekser i parser zatrzymują się na pierwszym błędzie. Kolejne błędy po pierwszym często są jego skutkiem, a dzięki temu implementacja jest prosta. Program jest najpierw w całości parsowany, więc przy błędzie leksykalnym lub składniowym nic się nie wykonuje.
-- Przy błędzie typu lub wykonania wyjście `pisz` z wcześniejszej części programu zostaje, a rysunek wykonany do tej chwili pozostaje. Reszta programu się nie wykonuje, interpreter wypisuje komunikat i kończy się normalnie.
+- Przy błędzie typu lub wykonania wyjście `pisz` z wcześniejszej części programu zostaje, a rysunek wykonany do tej chwili pozostaje. Reszta programu się nie wykonuje, interpreter wypisuje komunikat i kończy się normalnie. Wyjątek: błąd złapany przez `spróbuj` / `złap`.
 - Interpreter nigdy nie kończy się nieobsłużonym wyjątkiem. Każdy wyjątek jest łapany na najwyższym poziomie i zgłaszany jako błąd odpowiedniego rodzaju (nieoczekiwane jako `Błąd wewnętrzny`).
 - Kod wyjścia: 0 oznacza powodzenie, 1 błąd w programie (leksykalny, składniowy, typu, wykonania), 2 błąd wejścia, 3 błąd wewnętrzny.
 
 Przykłady:
+
 ```
 Błąd leksykalny (linia 1, kol. 6): niezamknięty tekst rozpoczęty tutaj.
 Błąd składni (linia 1, kol. 15): oczekiwano '{' po warunku 'jeżeli', napotkano 'np'.
@@ -452,18 +706,96 @@ Błąd wykonania (linia 2, kol. 11): dzielenie przez zero.
 Błąd wejścia: nie można otworzyć pliku 'program.logo'.
 ```
 
+## Obsługa błędów w programie: `spróbuj` i `złap`
+
+Błędy typu i wykonania normalnie przerywają program. Instrukcja `spróbuj` pozwala je złapać i kontynuować.
+
+Składnia:
+
+```
+spróbuj {
+    <instrukcje>
+} złap (<identyfikator>) {
+    <instrukcje>
+}
+```
+
+Zasady:
+
+- Wykonywany jest blok po `spróbuj`. Jeśli nie wystąpi błąd, blok `złap` jest pomijany.
+- Gdy w bloku `spróbuj` (także w wywołanej z niego procedurze) wystąpi błąd typu lub wykonania, jego wykonanie kończy się natychmiast, a program przechodzi do bloku `złap`. Instrukcje po miejscu błędu nie wykonują się.
+- Identyfikator w nawiasie to zmienna typu tekst z komunikatem błędu (w formacie z sekcji "Rodzaje błędów", np. `Błąd wykonania (linia 3, kol. 9): dzielenie przez zero.`). Można ją wypisać (`pisz(e)`) albo wstawić w interpolacji (`$"Nie udało się: {e}"`).
+- Częścią składni są oba bloki: `złap` jest obowiązkowe, a bloki mogą być puste. Nie ma `finally`.
+- Bloki nie tworzą zasięgu: zmienne przypisane w `spróbuj` (także przed błędem) i zmienna z `złap` żyją do końca procedury lub programu.
+- Wcześniejsze wyjście `pisz` i rysunek zostają, a po złapanym błędzie program kończy się normalnie (kod wyjścia 0, jeśli nic innego go nie przerwie).
+- `wynik` w bloku `spróbuj` lub `złap` kończy całą procedurę, tak jak w `powtórz`.
+- Wyrażenia nieobliczone (prawa strona `oraz` / `lub`, nieużyta gałąź `jeżeli`) nie zgłaszają błędów, więc nie ma czego łapać.
+- Błąd zgłoszony w bloku `złap` nie jest łapany przez ten sam `spróbuj`. Trafia do zewnętrznego `spróbuj` albo przerywa program.
+
+Co jest łapane, a co nie:
+
+|Rodzaj błędu|Łapany?|
+|---|---|
+|leksykalny|nie, program w ogóle się nie uruchamia|
+|składniowy|nie, program w ogóle się nie uruchamia|
+|typu|tak|
+|wykonania|tak (także przekroczenie głębokości wywołań i zły indeks tablicy)|
+|wejścia|nie|
+|wewnętrzny|nie|
+
+Przykłady:
+
+```
+start {
+    spróbuj {
+        pisz(10 / 0)
+    } złap (e) {
+        pisz("coś poszło nie tak")
+    }
+}
+```
+
+```
+start {
+    spróbuj {
+        ż <- GetŻółw("Nieistniejący")    # zwraca brak #
+        ż.np(10)                         # błąd wykonania: metoda na 'brak' #
+    } złap (błąd) {
+        pisz(błąd)
+    }
+}
+```
+
+`spróbuj` można zagnieżdżać. Błąd łapie najbliższy `spróbuj`, a błąd w `złap` idzie do zewnętrznego:
+
+```
+start {
+    spróbuj {
+        spróbuj {
+            t <- tablica(3)
+            t[10] <- 1                   # indeks poza zakresem #
+        } złap (wewnętrzny) {
+            pisz($"wewnętrzny błąd: {wewnętrzny}")
+            ż <- GetŻółw("Nieistniejący")
+            ż.np(10)                     # błąd w złap, łapie go zewnętrzny #
+        }
+    } złap (zewnętrzny) {
+        pisz($"zewnętrzny błąd: {zewnętrzny}")
+    }
+}
+```
+
+Często lepiej nie wywoływać błędu, tylko go uniknąć przez `brak`, `?.` i `??` (patrz "Brak, `??` i `?.`"). `spróbuj` zostawia się na błędy, których nie da się przewidzieć sprawdzeniem.
+
 ## Słowa zastrzeżone i tokeny
 
 ### Słowa kluczowe (12)
 
 Wielkość liter ma znaczenie (`Jeżeli` to zwykły identyfikator). Słów kluczowych nie można użyć jako nazwy zmiennej, parametru ani procedury.
 
-| Grupa              | Słowa                                  |
-| ------------------ | -------------------------------------- |
-| definicje          | `oto`, `wynik`                         |
-| sterowanie         | `jeżeli`, `inaczej`, `powtórz`, `żółw` |
-| operatory logiczne | `oraz`, `lub`, `nie`                   |
-| literały logiczne  | `prawda`, `fałsz`                      |
+```
+słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" ;
+```
 
 ### Nazwy funkcji wbudowanych (30)
 
@@ -473,26 +805,28 @@ Nie można ich zdefiniować jako procedury (`oto np ...` to błąd składniowy).
 naprzód np prawo pw lewo lw idź_do ustaw_kierunek środek
 podnieś_pisak opuść_pisak kolor_pisaka kolor_wypełnienia grubość
 ukryj_żółwia pokaż_żółwia okrąg początek_wypełnienia koniec_wypełnienia
-poz_x poz_y kierunek nowy_żółw usuń_żółwia wyczyść kolor_tła pisz liczba
+poz_x poz_y kierunek usuń_żółwia wyczyść kolor_tła pisz liczba
 tablica rozmiar
+żółw GetŻółw pos Kolor
 ```
 
 ### Tokeny rozróżniane przez lekser
 
-| Token               | Przykłady                     | Wartość tokenu                |
-| ------------------- | ----------------------------- | ----------------------------- |
-| IDENTYFIKATOR       | `kwadrat`, `idź_do`           | nazwa                         |
-| ZMIENNA             | `x`                           | -                             |
-| LICZBA              | `5`, `2.5`                    | liczba (`double`)             |
-| TEKST               | `"abc"`                       | tekst po rozwinięciu ucieczek |
-| tekst interpolowany | `$"x = {x}"`                  | ciąg tokenów (patrz niżej)    |
-| słowa kluczowe      | `oto`, `jeżeli`, ...          | 12 osobnych tokenów           |
-| operatory           | `+ - * / % = <> < > <= >= <-` | –                             |
-| separatory          | `( ) [ ] { }`                 | –                             |
-| KONIEC              | koniec wejścia                | –                             |
-Komentarze lekser pomija i nie zwraca dla nich tokenu. Każdy token ma pozycję (linia, kolumna).
+|Token|Przykłady|Wartość tokenu|
+|---|---|---|
+|IDENTYFIKATOR|`kwadrat`, `idź_do`|nazwa|
+|ZMIENNA|`x`|-|
+|LICZBA|`5`, `2.5`|liczba (`double`)|
+|TEKST|`"abc"`|tekst po rozwinięciu ucieczek|
+|tekst interpolowany|`$"x = {x}"`|ciąg tokenów (patrz niżej)|
+|słowa kluczowe|`oto`, `jeżeli`, ...|12 osobnych tokenów|
+|operatory|`+ - * / % = <> < > <= >= <-`|–|
+|separatory|`( ) [ ] { }`|–|
+|KONIEC|koniec wejścia|–|
+|Komentarze lekser pomija i nie zwraca dla nich tokenu. Każdy token ma pozycję (linia, kolumna).|||
 
 Tekst interpolowany lekser zwraca jako ciąg tokenów: początek (`$"`), części tekstu, `{`, tokeny wyrażenia, `}`, dalsze części tekstu i koniec (`"`). Wewnątrz tekstu `{` zaczyna wyrażenie, a poza tekstem `{` i `}` to nawiasy bloku. Lekser trzyma licznik otwartych interpolacji, żeby wiedzieć, czy `}` kończy wyrażenie w tekście czy blok.
+
 ### Ograniczenia języka
 
 - `wynik` poza procedurą to błąd składniowy.
@@ -502,22 +836,20 @@ Tekst interpolowany lekser zwraca jako ciąg tokenów: początek (`$"`), częśc
 
 Interpreter wykonuje drzewo rekurencyjnie na stosie wywołań, więc nieograniczona rekurencja (np. `oto f() {f()} już`) zabiłaby cały proces. Dlatego głębokość jest ograniczona. Wszystkie limity są parametrami:
 
-| Parametr                                     | Domyślnie | Zgłasza     | Rodzaj błędu |
-| -------------------------------------------- | --------- | ----------- | ------------ |
-| długość literału liczbowego                  | 64 znaki  | lekser      | leksykalny   |
-| długość identyfikatora                       | 64 znaki  | lekser      | leksykalny   |
-| długość tekstu                               | 10 000    | lekser      | leksykalny   |
-| zagnieżdżenie (nawiasy, bloki, interpolacje) | 100       | parser      | składniowy   |
-| głębokość wywołań procedur                   | 1000      | interpreter | wykonania    |
-| rozmiar tablicy                              | 1 000 000 | interpreter | wykonania    |
-
+|Parametr|Domyślnie|Zgłasza|Rodzaj błędu|
+|---|---|---|---|
+|długość literału liczbowego|64 znaki|lekser|leksykalny|
+|długość identyfikatora|64 znaki|lekser|leksykalny|
+|długość tekstu|10 000|lekser|leksykalny|
+|zagnieżdżenie (nawiasy, bloki, interpolacje)|100|parser|składniowy|
+|głębokość wywołań procedur|1000|interpreter|wykonania|
+|rozmiar tablicy|1 000 000|interpreter|wykonania|
 
 ```
 Błąd leksykalny (linia 1, kol. 1): identyfikator ma 70 znaków, limit wynosi 64.
 Błąd składni (linia 1, kol. 101): przekroczono maksymalne zagnieżdżenie (100).
 Błąd wykonania (linia 2, kol. 3): przekroczono maksymalną głębokość wywołań (1000).
 ```
-
 
 # URUCHOMIENIE I WYMAGANIA
 
@@ -537,27 +869,25 @@ logomocja --help                       pomoc
 
 W trakcie pracy: `dotnet run --project Logomocja.Cli -- program.logo`.
 
-| Opcja                       | Znaczenie                                                                          |
-| --------------------------- | ---------------------------------------------------------------------------------- |
-| `-e`, `--eval <kod>`        | źródłem programu jest podany tekst (drugie, obok pliku, źródło programu)           |
-| `-` (zamiast pliku)         | źródłem programu jest standardowe wejście, wygodne w skryptach                     |
-| `-o`, `--output <plik.svg>` | zapis rysunku do pliku SVG                                                         |
-| `--rysunek`                 | po wyniku programu wypisuje elementy rysunku jako tekst (do testów akceptacyjnych) |
-| `--drzewo`                  | wypisuje drzewo składniowe i kończy, nie wykonując programu (do testów parsera)    |
+|Opcja|Znaczenie|
+|---|---|
+|`-e`, `--eval <kod>`|źródłem programu jest podany tekst (drugie, obok pliku, źródło programu)|
+|`-` (zamiast pliku)|źródłem programu jest standardowe wejście, wygodne w skryptach|
+|`-o`, `--output <plik.svg>`|zapis rysunku do pliku SVG|
+|`--rysunek`|po wyniku programu wypisuje elementy rysunku jako tekst (do testów akceptacyjnych)|
+|`--drzewo`|wypisuje drzewo składniowe i kończy, nie wykonując programu (do testów parsera)|
 
 Drzewo wypisuje osobny wizytor po węzłach (`AstPrinter`), a nie metody samych węzłów, więc węzły nie wiedzą o wypisywaniu.
 
-### Przykłady
-
 ### Wynik uruchomienia
 
-| Sytuacja                                       | Standardowe wyjście   | Wyjście błędów         | Kod wyjścia |
-| ---------------------------------------------- | --------------------- | ---------------------- | ----------- |
-| program poprawny                               | wynik `pisz`          | puste                  | 0           |
-| błąd leksykalny lub składniowy                 | puste                 | komunikat              | 1           |
-| błąd typu lub wykonania                        | wynik `pisz` do błędu | komunikat              | 1           |
-| brak pliku, brak zapisu ( czyli błąd wejścia ) | puste                 | `Błąd wejścia: ...`    | 2           |
-| błąd wewnętrzny                                | wynik `pisz` do błędu | `Błąd wewnętrzny: ...` | 3           |
+|Sytuacja|Standardowe wyjście|Wyjście błędów|Kod wyjścia|
+|---|---|---|---|
+|program poprawny|wynik `pisz`|puste|0|
+|błąd leksykalny lub składniowy|puste|komunikat|1|
+|błąd typu lub wykonania|wynik `pisz` do błędu|komunikat|1|
+|brak pliku, brak zapisu ( czyli błąd wejścia )|puste|`Błąd wejścia: ...`|2|
+|błąd wewnętrzny|wynik `pisz` do błędu|`Błąd wewnętrzny: ...`|3|
 
 ## Wejście
 
@@ -568,12 +898,12 @@ Drzewo wypisuje osobny wizytor po węzłach (`AstPrinter`), a nie metody samych 
 
 ## Wyjście
 
-| Strumień                                | Zawartość                                              |
-| --------------------------------------- | ------------------------------------------------------ |
-| standardowe wyjście                     | wynik `pisz`: tekst i nowa linia `\n`, UTF-8 bez BOM   |
-| standardowe wyjście błędów              | komunikaty błędów w formacie z sekcji "Rodzaje błędów" |
-| plik SVG (opcja `-o`)                   | rysunek                                                |
-| standardowe wyjście (opcja `--rysunek`) | lista elementów rysunku po wyniku programu             |
+|Strumień|Zawartość|
+|---|---|
+|standardowe wyjście|wynik `pisz`: tekst i nowa linia `\n`, UTF-8 bez BOM|
+|standardowe wyjście błędów|komunikaty błędów w formacie z sekcji "Rodzaje błędów"|
+|plik SVG (opcja `-o`)|rysunek|
+|standardowe wyjście (opcja `--rysunek`)|lista elementów rysunku po wyniku programu|
 
 - Przed wypisaniem komunikatu błędu wyjście standardowe jest opróżniane, więc kolejność wyniku i komunikatu jest zawsze poprawna.
 - `pisz` zapisuje do wstrzykiwanego `TextWriter`: w programie jest to konsola, a w testach bufor w pamięci.
@@ -614,7 +944,7 @@ wielokąt a [(0,0) (0,50) (50,50) (50,0) (0,0)] kolor=(255,0,0)
 |WF8|Instrukcja warunkowa z łańcuchem `inaczej jeżeli` i pętla `powtórz`.|
 |WF9|Definiowanie procedur z parametrami, zwracanie wartości przez `wy`, rekurencja, przekazywanie argumentów przez wartość.|
 |WF10|Funkcje wbudowane obsługiwane tak samo jak procedury użytkownika (wspólny rejestr).|
-|WF11|Wiele żółwi na wspólnym płótnie: tworzenie, usuwanie, blok `żółw` i domyślny żółw `logi`.|
+|WF11|Wiele żółwi na wspólnym płótnie: tworzenie, usuwanie, tworzenie (`żółw`, `GetŻółw`), metody żółwia, blok `Run` i domyślny żółw `logi`.|
 |WF12|Rysowanie: odcinki, okręgi, wypełnienia, kolor i grubość pisaka, pisak w górę i w dół, widoczność żółwia, kolor tła.|
 |WF13|Wyjście tekstowe `pisz`.|
 |WF14|Obsługa błędów sześciu rodzajów z komunikatami zawierającymi pozycję, oczekiwane i napotkane oraz podpowiedzi.|
@@ -639,22 +969,23 @@ wielokąt a [(0,0) (0,50) (50,50) (50,0) (0,0)] kolor=(255,0,0)
 
 ### Zgodność z wymaganiami prowadzących
 
-| Wymaganie                                                       | Realizacja                                                                           |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| typy liczbowe, operacje o różnym priorytecie, nawiasy           | `liczba` (`double`), tabela operatorów, EBNF wyrażeń                                 |
-| tekst, konkatenacja, dowolne znaki w tekście                    | `tekst`, `+`, ucieczki `\"`, `\n`, `\t`, `\\`, nowa linia w tekście                  |
-| komentarze                                                      | `# ... #`                                                                            |
-| zmienne, typowanie, zakresy                                     | `<-`, typowanie dynamiczne i silne, sekcja "Zasięg zmiennych"                        |
-| przynajmniej jedna instrukcja warunkowa i pętla                 | `jeżeli` / `inaczej`, `powtórz`                                                      |
-| własne funkcje ze zmiennymi lokalnymi, przekazywanie argumentów | `oto ...`, parametry lokalne, przekazywanie przez wartość (tablice przez referencję) |
-| rekurencja                                                      | rekurencja bezpośrednia, limit głębokości 1000                                       |
-| funkcje wbudowane jak funkcje użytkownika                       | wspólny rejestr i to samo wywołanie                                                  |
-| obsługa błędów, interpreter się nie wywala                      | sześć rodzajów błędów, łapanie wyjątków na najwyższym poziomie                       |
-| leniwy lekser, dwa źródła, token z wartością i pozycją          | `TextReader`, plik i ciąg znaków, `Token` z wartością i pozycją                      |
-| parser buduje od razu strukturę do interpretacji                | drzewo instrukcji budowane w parserze, `--drzewo` do podglądu                        |
-| testy jednostkowe (ciągi znaków), negatywne, akceptacyjne       | `Logomocja.Tests`, plik z przykładami programów i oczekiwanym wynikiem               |
+|Wymaganie|Realizacja|
+|---|---|
+|typy liczbowe, operacje o różnym priorytecie, nawiasy|`liczba` (`double`), tabela operatorów, EBNF wyrażeń|
+|tekst, konkatenacja, dowolne znaki w tekście|`tekst`, `+`, ucieczki `\"`, `\n`, `\t`, `\\`, nowa linia w tekście|
+|komentarze|`# ... #`|
+|zmienne, typowanie, zakresy|`<-`, typowanie dynamiczne i silne, sekcja "Zasięg zmiennych"|
+|przynajmniej jedna instrukcja warunkowa i pętla|`jeżeli` / `inaczej`, `powtórz`|
+|własne funkcje ze zmiennymi lokalnymi, przekazywanie argumentów|`oto ...`, parametry lokalne, przekazywanie przez wartość (tablice przez referencję)|
+|rekurencja|rekurencja bezpośrednia, limit głębokości 1000|
+|funkcje wbudowane jak funkcje użytkownika|wspólny rejestr i to samo wywołanie|
+|obsługa błędów, interpreter się nie wywala|sześć rodzajów błędów, łapanie wyjątków na najwyższym poziomie|
+|leniwy lekser, dwa źródła, token z wartością i pozycją|`TextReader`, plik i ciąg znaków, `Token` z wartością i pozycją|
+|parser buduje od razu strukturę do interpretacji|drzewo instrukcji budowane w parserze, `--drzewo` do podglądu|
+|testy jednostkowe (ciągi znaków), negatywne, akceptacyjne|`Logomocja.Tests`, plik z przykładami programów i oczekiwanym wynikiem|
 
 ---
+
 # ARCHITEKTURA I MODUŁY PROJEKTU
 
 Projekt został podzielony na niezależne moduły o jednokierunkowych zależnościach. Główne komponenty potoku przetwarzania nie wiedzą o swoim istnieniu nawzajem – komunikują się wyłącznie poprzez przekazywanie ustrukturyzowanych danych, co zapewnia wysoką modularność i ułatwia testowanie.
@@ -663,15 +994,15 @@ Projekt został podzielony na niezależne moduły o jednokierunkowych zależnoś
 
 Całe rozwiązanie składa się z następujących projektów fizycznych, izolujących od siebie poszczególne warstwy logiki:
 
-| **Projekt**                       | **Zawartość**                                                                                                                          | **Zależy od**                 |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| **Logomocja.Core**                | `Position`, `Color`, `Turtle`, `Canvas`, `Drawable`, `IRenderer`, `World`, `FilledPolygon`, `LineSegment`, `Circle`                    | _nic_                         |
-| Logomocja.Language                | `SourceText`, `SourcePosition`, `Diagnostic`, `Token`, `Lexer`, węzły drzewa, `Parser`, `AstPrinter`, interfejs `IProcedureSignatures` | nic                           |
-| Logomocja.Runtime                 | `Interpreter`, środowisko, rejestr funkcji wbudowanych (implementuje `IProcedureSignatures`), `RuntimeError`, stos aktywnych żółwi     | `Core`, `Language`            |
-| Logomocja.Cli                     | `Program` (opcje, kody wyjścia), `SvgRenderer`, zrzut tekstowy rysunku                                                                 | `Runtime`, `Core`, `Language` |
-| Logomocja.Editor<br>(opcjonalnie) | UI i `IRenderer` ( technologia to będzie prawdopodobnie WPF albo Avalonia)                                                             | `Runtime`                     |
-| Logomocja.Tests                   | testy każdej warstwy z osobna, atrapa ( TestRender przydatna będzie to testów)                                                         | wszystkie                     |
-Architektura opiera się na jednokierunkowym potoku przetwarzania (pipeline). Poszczególne moduły nie wiedzą o swoim istnieniu nawzajem – komunikują się wyłącznie poprzez przekazywanie ustrukturyzowanych danych.
+|**Projekt**|**Zawartość**|**Zależy od**|
+|---|---|---|
+|**Logomocja.Core**|`Position`, `Color`, `Turtle`, `Canvas`, `Drawable`, `IRenderer`, `World`, `FilledPolygon`, `LineSegment`, `Circle`|_nic_|
+|Logomocja.Language|`SourceText`, `SourcePosition`, `Diagnostic`, `Token`, `Lexer`, węzły drzewa, `Parser`, `AstPrinter`, interfejs `IProcedureSignatures`|nic|
+|Logomocja.Runtime|`Interpreter`, środowisko, rejestr funkcji wbudowanych (implementuje `IProcedureSignatures`), `RuntimeError`, stos aktywnych żółwi|`Core`, `Language`|
+|Logomocja.Cli|`Program` (opcje, kody wyjścia), `SvgRenderer`, zrzut tekstowy rysunku|`Runtime`, `Core`, `Language`|
+|Logomocja.Editor<br>(opcjonalnie)|UI i `IRenderer` ( technologia to będzie prawdopodobnie WPF albo Avalonia)|`Runtime`|
+|Logomocja.Tests|testy każdej warstwy z osobna, atrapa ( TestRender przydatna będzie to testów)|wszystkie|
+|Architektura opiera się na jednokierunkowym potoku przetwarzania (pipeline). Poszczególne moduły nie wiedzą o swoim istnieniu nawzajem – komunikują się wyłącznie poprzez przekazywanie ustrukturyzowanych danych.|||
 
 Nazwa `Position` w `Core` oznacza punkt (x, y), a pozycja w tekście programu (linia, kolumna) nazywa się `SourcePosition`, żeby `Runtime` mógł używać obu bez kolizji.
 
@@ -705,29 +1036,29 @@ flowchart TD
     Interpreter -.->|błąd| ErrRun["Błąd typu lub wykonania (przerywa program)"]
 ```
 
-
 ## Podział ról
 
-| **Moduł**       | **Wejście**                           | **Wyjście**                                                | **Kluczowe mechanizmy**                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| --------------- | ------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Lekser**      | strumień znaków (`TextReader`)        | `Token` (rodzaj, wartość, linia, kolumna)                  | • leniwa tokenizacja (czyta tylko tyle, ile potrzeba do jednego tokenu)  <br>• natychmiastowa konwersja (`"2.5"` od razu staje się `double`, tekst bez ucieczek)  <br>• limity długości literałów, identyfikatorów i tekstów  <br>• tryb interpolacji (licznik otwartych interpolacji)  <br>• zatrzymanie na pierwszym błędzie                                                                                                                                      |
-| **Parser**      | `ITokenSource`                        | drzewo obiektów programu (węzły instrukcji i wyrażeń)      | • zejścia rekurencyjne: funkcje nazwane jak produkcje, nad każdą komentarz z linią EBNF  <br>• węzły budowane od razu  <br>• rejestr procedur (nazwa, arność) uzupełniany przy `oto` i z `IProcedureSignatures`  <br>• kontrola nazw i arności w trakcie parsowania  <br>• jeden token podglądu przy `<-` i `[`  <br>• limit zagnieżdżenia, zatrzymanie na pierwszym błędzie  <br>• węzły mają `Accept`, a wypisywanie drzewa (`--drzewo`) robi osobny `AstPrinter` |
-| **Interpreter** | drzewo obiektów programu              | zmiany stanu `World` (rysunek) i tekst do `TextWriter`     | • zasięg globalny i lokalny (procedura widzi tylko swoje zmienne)  <br>• jeden rejestr wywołań dla funkcji wbudowanych i procedur `oto`  <br>• stos aktywnych żółwi (blok `żółw`, domyślny `logi`)  <br>• licznik głębokości wywołań i propagacja `wy`  <br>• błędy typu i wykonania z pozycją z węzła drzewa                                                                                                                                                       |
-| **Cli**         | argumenty wywołania i źródło programu | standardowe wyjście, wyjście błędów, plik SVG, kod wyjścia | • składanie potoku  <br>• łapanie wszystkich wyjątków (nieoczekiwane jako błąd wewnętrzny)  <br>• `SvgRenderer` i zrzut tekstowy rysunku (`--rysunek`)                                                                                                                                                                                                                                                                                                              |
+|**Moduł**|**Wejście**|**Wyjście**|**Kluczowe mechanizmy**|
+|---|---|---|---|
+|**Lekser**|strumień znaków (`TextReader`)|`Token` (rodzaj, wartość, linia, kolumna)|• leniwa tokenizacja (czyta tylko tyle, ile potrzeba do jednego tokenu) <br>• natychmiastowa konwersja (`"2.5"` od razu staje się `double`, tekst bez ucieczek) <br>• limity długości literałów, identyfikatorów i tekstów <br>• tryb interpolacji (licznik otwartych interpolacji) <br>• zatrzymanie na pierwszym błędzie|
+|**Parser**|`ITokenSource`|drzewo obiektów programu (węzły instrukcji i wyrażeń)|• zejścia rekurencyjne: funkcje nazwane jak produkcje, nad każdą komentarz z linią EBNF <br>• węzły budowane od razu <br>• rejestr procedur (nazwa, arność) uzupełniany przy `oto` i z `IProcedureSignatures` <br>• kontrola nazw i arności w trakcie parsowania <br>• jeden token podglądu przy `<-` i `[` <br>• limit zagnieżdżenia, zatrzymanie na pierwszym błędzie <br>• węzły mają `Accept`, a wypisywanie drzewa (`--drzewo`) robi osobny `AstPrinter`|
+|**Interpreter**|drzewo obiektów programu|zmiany stanu `World` (rysunek) i tekst do `TextWriter`|• zasięg globalny i lokalny (procedura widzi tylko swoje zmienne) <br>• jeden rejestr wywołań dla funkcji wbudowanych i procedur `oto` <br>• stos aktywnych żółwi (blok `Run`, domyślny `logi`) <br>• licznik głębokości wywołań i propagacja `wy` <br>• błędy typu i wykonania z pozycją z węzła drzewa|
+|**Cli**|argumenty wywołania i źródło programu|standardowe wyjście, wyjście błędów, plik SVG, kod wyjścia|• składanie potoku <br>• łapanie wszystkich wyjątków (nieoczekiwane jako błąd wewnętrzny) <br>• `SvgRenderer` i zrzut tekstowy rysunku (`--rysunek`)|
+
 ## Struktury danych
 
-| **Struktura**               | **Moduł**  | **Zawartość i użycie**                                                                                                                                                                                       |
-| --------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Token`                     | `Language` | rodzaj, wartość (`double`, tekst albo nazwa) i `SourcePosition`; strumień tokenów jest czytany leniwie                                                                                                       |
-| węzły drzewa                | `Language` | instrukcje (przypisanie, warunek, powtórz, żółw, powrót, wywołanie, definicja procedury) i wyrażenia (operator, literał, odczyt, wywołanie, interpolacja), każdy z pozycją; razem tworzą hierarchię (drzewo) |
-| rejestr procedur w parserze | `Language` | słownik nazwa → arność (opcjonalnie: czy zwraca wartość), uzupełniany przy `oto` i z `IProcedureSignatures`                                                                                                  |
-| `Diagnostic`                | `Language` | rodzaj błędu, komunikat, podpowiedź, `SourcePosition`                                                                                                                                                        |
-| wartość                     | `Runtime`  | liczba (`double`), tekst (`string`), logiczna (`bool`), tablica (lista wartości, współdzielona przez referencję)                                                                                             |
-| wywoływalne                 | `Runtime`  | wspólny interfejs (arność, wywołanie) dla funkcji wbudowanych i procedur użytkownika; słownik nazwa → wywoływalne                                                                                            |
-| środowisko                  | `Runtime`  | słownik nazwa → wartość dla zasięgu globalnego i osobny dla każdego wywołania procedury; stos ramek wywołań (jego rozmiar to licznik głębokości)                                                             |
-| stos aktywnych żółwi        | `Runtime`  | stos nazw; wierzchołek wykonuje komendy żółwia; na starcie zawiera `logi`                                                                                                                                    |
-| `World`                     | `Core`     | słownik nazwa → `Turtle` i jeden `Canvas` (lista `Drawable` w kolejności dodania)                                                                                                                            |
-| `Drawable`                  | `Core`     | `LineSegment`, `Circle`, `FilledPolygon` (niemutowalne), renderowane przez `IRenderer`                                                                                                                       |
+|**Struktura**|**Moduł**|**Zawartość i użycie**|
+|---|---|---|
+|`Token`|`Language`|rodzaj, wartość (`double`, tekst albo nazwa) i `SourcePosition`; strumień tokenów jest czytany leniwie|
+|węzły drzewa|`Language`|instrukcje (przypisanie, warunek, powtórz, żółw, powrót, wywołanie, definicja procedury) i wyrażenia (operator, literał, odczyt, wywołanie, interpolacja), każdy z pozycją; razem tworzą hierarchię (drzewo)|
+|rejestr procedur w parserze|`Language`|słownik nazwa → arność (opcjonalnie: czy zwraca wartość), uzupełniany przy `oto` i z `IProcedureSignatures`|
+|`Diagnostic`|`Language`|rodzaj błędu, komunikat, podpowiedź, `SourcePosition`|
+|wartość|`Runtime`|liczba (`double`), tekst (`string`), logiczna (`bool`), tablica (lista wartości, współdzielona przez referencję)|
+|wywoływalne|`Runtime`|wspólny interfejs (arność, wywołanie) dla funkcji wbudowanych i procedur użytkownika; słownik nazwa → wywoływalne|
+|środowisko|`Runtime`|słownik nazwa → wartość dla zasięgu globalnego i osobny dla każdego wywołania procedury; stos ramek wywołań (jego rozmiar to licznik głębokości)|
+|stos aktywnych żółwi|`Runtime`|stos nazw; wierzchołek wykonuje komendy żółwia; na starcie zawiera `logi`|
+|`World`|`Core`|słownik nazwa → `Turtle` i jeden `Canvas` (lista `Drawable` w kolejności dodania)|
+|`Drawable`|`Core`|`LineSegment`, `Circle`, `FilledPolygon` (niemutowalne), renderowane przez `IRenderer`|
 
 # STRATEGIA TESTOWANIA
 
@@ -739,16 +1070,16 @@ Oznaczenia przypadków (A, L, S, T, R) odnoszą się do pliku z przykładami (za
 
 |**Poziom**|**Moduł**|**Wejście i sposób weryfikacji**|**Kluczowe przypadki (pozytywne [+] i negatywne [-])**|
 |---|---|---|---|
-|Jednostkowe|Core|metody `Turtle`, `World`, `Canvas` bez interpretera, `TestRenderer` zapisuje wywołania|**[+]** ruch i skręty (kwadrat wraca do (0,0)), normalizacja kąta, wypełnienie (5 punktów), kolejność rysowania  <br>**[-]** duplikat i brak żółwia, `EndFill` bez `BeginFill`, wielokąt z dwóch punktów|
-|Jednostkowe|Lekser|tekst na wejściu, porównanie ciągu tokenów (rodzaj, wartość, pozycja); osobny test dla każdego rodzaju tokenu i test leniwości (źródło nie jest czytane dalej, niż trzeba)|**[+]** ucieczki, interpolacja, liczby zmiennoprzecinkowe, komentarze wielolinijkowe, `<-` kontra `<`, `x<-10` w czterech zapisach, `<=` i `<>`  <br>**[-]** niezamknięty tekst (L1), niezamknięty komentarz (L2), nieznany znak `@` (L3), zła ucieczka (L4), niezamknięta interpolacja (L5), limit 64 znaków (L6)|
-|Jednostkowe|Parser|wejście: ciągi tokenów; wynik: tekstowy zrzut drzewa (`AstPrinter`) porównywany ze wzorcem; sprawdzanie pozycji w błędach|**[+]** każda produkcja i każda alternatywa osobno, priorytety i łączność (`a lub b oraz c` kontra `(a lub b) oraz c`), `inaczej jeżeli`, zagnieżdżone `jeżeli`  <br>**[-]** brak `{` (S1), procedura bez `już` (S6), nieznana procedura (S7), zła arność (S8), `<-` zamiast porównania (S11), nazwa wbudowana jako procedura (S15), `wy` poza procedurą (S16)|
-|Integracyjne|Lekser + parser|wejście: tekst; wynik: zrzut drzewa|**[+]** programy A1-A26 parsują się do oczekiwanych drzew  <br>**[-]** błąd leksykalny zatrzymuje potok przed parserem (L1-L6)|
-|Jednostkowe|Interpreter|drzewo zbudowane z tekstu; wyjście `pisz` w buforze i rysunek w `TestRenderer`|**[+]** wyrażenia i priorytety (A8, A9), przekazywanie przez wartość (A12) i referencję (A13), zasięg zmiennych, `wy` z zagnieżdżonych pętli (A15)  <br>**[-]** błędy typu (T1-T10) i wykonania (R1-R13) z dokładnym komunikatem i pozycją|
-|Odpornościowe|Interpreter|"złośliwy" kod z obniżonymi limitami (np. głębokość 10, żeby test był szybki)|**[+]** program z rekurencją na granicy limitu działa  <br>**[-]** nieskończona rekurencja kończy się błędem wykonania, zanim wyczerpie się stos (R8, `StackOverflowException` w .NET nie da się złapać), procedura nie widzi zmiennej globalnej (R16), przepełnienie (R2), dzielenie przez zero (R1)|
-|Jednostkowe|SvgRenderer|porównanie wygenerowanego SVG ze wzorcem|**[+]** pusty rysunek (200 × 200), linia, okrąg, wielokąt, żółw, odwrócona oś Y, tło  <br>**[-]** niewidoczny żółw pomijany|
-|Jednostkowe|Cli|opcje `-e`, `-`, `-o`, `--rysunek`, `--drzewo`; kody wyjścia|**[+]** kod 0 dla poprawnego programu  <br>**[-]** brak pliku (kod 2), błąd w programie (kod 1), wyjście opróżniane przed komunikatem|
-|Akceptacyjne E2E|Wyjście i błędy|skrypt uruchamia `logomocja` na plikach z przykładami i porównuje standardowe wyjście, wyjście błędów i kod wyjścia (0, 1, 2, 3)|**[+]** silnia (A5), interpolacja i teksty (A17), leniwe `oraz` i `lub` bez dzielenia przez zero (A9), komentarze (A18), białe znaki (A19)  <br>**[-]** warunek nie jest logiczny (T1), liczba przekazana do `pisz` (T3), błąd w środku programu: wcześniejsze wyjście zostaje, komunikat idzie na `stderr` (R14)|
-|Akceptacyjne E2E|Grafika|zrzut `--rysunek` porównywany z oczekiwanym (współrzędne z tolerancją 1e-6), w testach w pamięci `TestRenderer`|**[+]** niezależny kontekst wielu żółwi (A21), wypełnienie wielokąta (A22), brak rysowania przy podniesionym pisaku (A23)  <br>**[-]** nieistniejący żółw (R9), powtórzony żółw (R10), składowa koloru poza zakresem (R11)|
+|Jednostkowe|Core|metody `Turtle`, `World`, `Canvas` bez interpretera, `TestRenderer` zapisuje wywołania|**[+]** ruch i skręty (kwadrat wraca do (0,0)), normalizacja kąta, wypełnienie (5 punktów), kolejność rysowania <br>**[-]** duplikat i brak żółwia, `EndFill` bez `BeginFill`, wielokąt z dwóch punktów|
+|Jednostkowe|Lekser|tekst na wejściu, porównanie ciągu tokenów (rodzaj, wartość, pozycja); osobny test dla każdego rodzaju tokenu i test leniwości (źródło nie jest czytane dalej, niż trzeba)|**[+]** ucieczki, interpolacja, liczby zmiennoprzecinkowe, komentarze wielolinijkowe, `<-` kontra `<`, `x<-10` w czterech zapisach, `<=` i `<>` <br>**[-]** niezamknięty tekst (L1), niezamknięty komentarz (L2), nieznany znak `@` (L3), zła ucieczka (L4), niezamknięta interpolacja (L5), limit 64 znaków (L6)|
+|Jednostkowe|Parser|wejście: ciągi tokenów; wynik: tekstowy zrzut drzewa (`AstPrinter`) porównywany ze wzorcem; sprawdzanie pozycji w błędach|**[+]** każda produkcja i każda alternatywa osobno, priorytety i łączność (`a lub b oraz c` kontra `(a lub b) oraz c`), `inaczej jeżeli`, zagnieżdżone `jeżeli` <br>**[-]** brak `{` (S1), procedura bez `już` (S6), nieznana procedura (S7), zła arność (S8), `<-` zamiast porównania (S11), nazwa wbudowana jako procedura (S15), `wy` poza procedurą (S16)|
+|Integracyjne|Lekser + parser|wejście: tekst; wynik: zrzut drzewa|**[+]** programy A1-A26 parsują się do oczekiwanych drzew <br>**[-]** błąd leksykalny zatrzymuje potok przed parserem (L1-L6)|
+|Jednostkowe|Interpreter|drzewo zbudowane z tekstu; wyjście `pisz` w buforze i rysunek w `TestRenderer`|**[+]** wyrażenia i priorytety (A8, A9), przekazywanie przez wartość (A12) i referencję (A13), zasięg zmiennych, `wy` z zagnieżdżonych pętli (A15) <br>**[-]** błędy typu (T1-T10) i wykonania (R1-R13) z dokładnym komunikatem i pozycją|
+|Odpornościowe|Interpreter|"złośliwy" kod z obniżonymi limitami (np. głębokość 10, żeby test był szybki)|**[+]** program z rekurencją na granicy limitu działa <br>**[-]** nieskończona rekurencja kończy się błędem wykonania, zanim wyczerpie się stos (R8, `StackOverflowException` w .NET nie da się złapać), procedura nie widzi zmiennej globalnej (R16), przepełnienie (R2), dzielenie przez zero (R1)|
+|Jednostkowe|SvgRenderer|porównanie wygenerowanego SVG ze wzorcem|**[+]** pusty rysunek (200 × 200), linia, okrąg, wielokąt, żółw, odwrócona oś Y, tło <br>**[-]** niewidoczny żółw pomijany|
+|Jednostkowe|Cli|opcje `-e`, `-`, `-o`, `--rysunek`, `--drzewo`; kody wyjścia|**[+]** kod 0 dla poprawnego programu <br>**[-]** brak pliku (kod 2), błąd w programie (kod 1), wyjście opróżniane przed komunikatem|
+|Akceptacyjne E2E|Wyjście i błędy|skrypt uruchamia `logomocja` na plikach z przykładami i porównuje standardowe wyjście, wyjście błędów i kod wyjścia (0, 1, 2, 3)|**[+]** silnia (A5), interpolacja i teksty (A17), leniwe `oraz` i `lub` bez dzielenia przez zero (A9), komentarze (A18), białe znaki (A19) <br>**[-]** warunek nie jest logiczny (T1), liczba przekazana do `pisz` (T3), błąd w środku programu: wcześniejsze wyjście zostaje, komunikat idzie na `stderr` (R14)|
+|Akceptacyjne E2E|Grafika|zrzut `--rysunek` porównywany z oczekiwanym (współrzędne z tolerancją 1e-6), w testach w pamięci `TestRenderer`|**[+]** niezależny kontekst wielu żółwi (A21), wypełnienie wielokąta (A22), brak rysowania przy podniesionym pisaku (A23) <br>**[-]** nieistniejący żółw (R9), powtórzony żółw (R10), składowa koloru poza zakresem (R11)|
 
 ## Uruchamianie i pokrycie
 
@@ -760,13 +1091,14 @@ Oznaczenia przypadków (A, L, S, T, R) odnoszą się do pliku z przykładami (za
 
 # DODATKI
 
-## Tablice 
+## Tablice
+
 Język powyżej jest przygotowany do implementacji tablic. Będą one obsługiwane jeżeli starczy czasu na ich implementację.
 
-| Funkcja   | Arg. | Typy     | Działanie                                             |
-| --------- | ---- | -------- | ----------------------------------------------------- |
-| `tablica` | 1    | liczba n | nowa tablica o n elementach, każdy początkowo równy 0 |
-| `rozmiar` | 1    | tablica  | liczba elementów                                      |
+|Funkcja|Arg.|Typy|Działanie|
+|---|---|---|---|
+|`tablica`|1|liczba n|nowa tablica o n elementach, każdy początkowo równy 0|
+|`rozmiar`|1|tablica|liczba elementów|
 
 Element tablicy: odczyt `t[i]` (wyrażenie), zapis `t[i] <- wartość` (instrukcja).
 
@@ -783,10 +1115,13 @@ Błąd składni (linia 4, kol. 1): odczyt elementu nie jest instrukcją. Czy cho
 ```
 
 składnia tworzenia:
+
 ```
 mojaTablia <- tablica(10)
 ```
-Przykład: 
+
+Przykład:
+
 ```
 mojTab <- tablica(10)
 mojTab[5] <-  1 # wstawiam 6-ty element na 1 ( szósty element bo liczymy od 0)#
@@ -802,7 +1137,4 @@ powtórz (rozmiar(mojaTablica), mojaTablica) {
 pisz $"trzeci element: {:mojaTablica[2]}"      # trzeci element: 20 #
 ```
 
-UWAGA: 
-gdy tablice nie powstaną, usuwamy z gramatyki części `{ "[" , wyrażenie , "]" }`.
-
-
+UWAGA: gdy tablice nie powstaną, usuwamy z gramatyki części `{ "[" , wyrażenie , "]" }`.
