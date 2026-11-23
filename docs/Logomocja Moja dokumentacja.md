@@ -11,55 +11,54 @@ Parę decyzji projektowych:
 EBNF podstawa:
 
 ```
-program                 = { definicja_procedury }, główny_blok;
-główny_blok             = "start", blok;
-definicja_procedury     = "oto" , identyfikator ,"(" , lista_parametrów ,")", blok;
-lista_parametrów        = [identyfikator , { ",", identyfikator } ] ;
-instrukcja              = przypisanie
-						| instrukcja_warunkowa
-						| instrukcja_run
-						| pętla_powtórz
-						| instrukcja_próby
-						| powrót
-						| instrukcja_wywołania ;
-						
-przypisanie             = dostęp_do_pamięci, "<-", wyrażenie ;
-dostęp_do_pamięci       = identyfikator , { "[", wyrażenie, "]" };
+program                 = { definicja_procedury }, główny_blok ;
+główny_blok             = "start", blok ;
+definicja_procedury     = "oto", identyfikator, "(", lista_parametrów, ")", blok ;
+lista_parametrów        = [ identyfikator, { ",", identyfikator } ] ;
 
-instrukcja_warunkowa    = "jeżeli" , "(" , wyrażenie, ")" , blok , [ "inaczej" , ( blok | instrukcja_warunkowa ) ] ;
-pętla_powtórz           = "powtórz" ,  "(" , wyrażenie, ")" , blok ;
+blok                    = "{", { instrukcja }, "}" ;
+instrukcja              = instrukcja_id
+                        | instrukcja_warunkowa
+                        | pętla_powtórz
+                        | instrukcja_próby
+                        | powrót ;
+
+instrukcja_id           = identyfikator, po_identyfikatorze ;
+po_identyfikatorze      = "<-", wyrażenie
+                        | argumenty, [ łańcuch ]
+                        | łańcuch ;
+łańcuch                 = "?.", identyfikator, argumenty, [ łańcuch ]
+                        | ".", ( "Run", "(", ")", blok
+                               | identyfikator, argumenty, [ łańcuch ] ) ;
+
+instrukcja_warunkowa    = "jeżeli", "(", wyrażenie, ")", blok,
+                          [ "inaczej", ( blok | instrukcja_warunkowa ) ] ;
+pętla_powtórz           = "powtórz", "(", wyrażenie, ")", blok ;
 instrukcja_próby        = "spróbuj", blok, "złap", "(", identyfikator, ")", blok ;
-instrukcja_wywołania    = wywołanie, { część_metody } | dostęp_do_pamięci, część_metody, { część_metody } ;
-
-instrukcja_run          = ( wywołanie | dostęp_do_pamięci ), { część_metody }, ".", "Run", "(", ")", blok ;
-część_metody            = ("." | "?." ), identyfikator, "(", [ lista_argumentów ], ")" ;
-
-powrót                  = "wynik" , wyrażenie ;
-blok                    = "{" , { instrukcja } , "}" ;
-lista_argumentów        = wyrażenie , { "," , wyrażenie } ;
+powrót                  = "wynik", wyrażenie ;
+argumenty               = "(", [ lista_argumentów ], ")" ;
+lista_argumentów        = wyrażenie, { ",", wyrażenie } ;
 ```
 
 ```
 wyrażenie               = domyślna ;
 domyślna                = alternatywa, { "??", alternatywa } ;
-alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
-koniunkcja              = negacja , { "oraz" , negacja } ;
-negacja                 = ["nie"], porównanie ;
-porównanie              = suma , [ operator_porównania , suma ] ;
-suma                    = iloczyn , { ( "+" | "-" ) , iloczyn } ;
-iloczyn                 = jednoargumentowy , { ( "*" | "/" | "%" ) , jednoargumentowy } ;
-jednoargumentowy        = ["-"] , czynnik ;
+alternatywa             = koniunkcja, { "lub", koniunkcja } ;
+koniunkcja              = negacja, { "oraz", negacja } ;
+negacja                 = [ "nie" ], porównanie ;
+porównanie              = suma, [ operator_porównania, suma ] ;
+suma                    = iloczyn, { ( "+" | "-" ), iloczyn } ;
+iloczyn                 = jednoargumentowy, { ( "*" | "/" | "%" ), jednoargumentowy } ;
+jednoargumentowy        = [ "-" ], czynnik ;
 
-czynnik                 = podstawowy, {część_metody};
+czynnik                 = podstawowy, { część_metody } ;
+część_metody            = ( "." | "?." ), identyfikator, argumenty ;
 podstawowy              = liczba
-						| tekst
-						| tekst_interpolowany
-						| "prawda" | "fałsz" | "brak"
-						| dostęp_do_pamięci
-						| wywołanie
-						| "(" , wyrażenie , ")" ;
-
-wywołanie               = identyfikator , "(" , [ lista_argumentów ], ")";
+                        | tekst
+                        | tekst_interpolowany
+                        | "prawda" | "fałsz" | "brak"
+                        | identyfikator, [ argumenty ]
+                        | "(", wyrażenie, ")" ;
 
 operator_porównania     = "=" | "<>" | "<" | ">" | "<=" | ">=" ;
 ```
@@ -91,7 +90,7 @@ powtórz ( <wyrażenie> ) { <instrukcje> }
 
 - Wyrażenie jest obliczane raz, przed pierwszym obiegiem (zmiana :n w ciele nie zmienia liczby obiegów).
 - Wartość musi być liczbą całkowitą nieujemną. 0 oznacza brak obiegów.
-- `wy` w ciele pętli kończy całą procedurę.
+- `wynik` w ciele pętli kończy całą procedurę.
 
 przykładowe błędy:
 
@@ -157,15 +156,15 @@ Robimy typowanie dynamiczne i silne. Jeden zapis `<-` do tworzenia i zmiany zmie
 Składnia:
 
 ```
-<dostęp_do_pamięci> <- <wyrażenie>
+<identyfikator> <- <wyrażenie>
 ```
 
 UWAGA: tutaj ważne, że między znakami `<` oraz `-` nie ma spacji przykłady:
 
 ```
-jeżeli :x < -10 { ... }       # porównanie (spacja między < a -)#
-jeżeli :x < (-10) { ... }     # też porównanie#
-jeżeli :x<-10 { ... }         # błąd, nie porównanie#
+jeżeli (x < -10) { ... }       # porównanie (spacja między < a -)#
+jeżeli (x < (-10)) { ... }     # też porównanie #
+jeżeli (x<-10) { ... }         # błąd, nie porównanie #
 ```
 
 błąd postaci:
@@ -173,6 +172,11 @@ błąd postaci:
 ```
 Błąd składni (linia 3, kol. 9): nieoczekiwane '<-' w wyrażeniu.
 Czy chodziło o porównanie z liczbą ujemną? Napisz 'x < -10' (ze spacją).
+```
+lub 
+
+```
+Błąd składni (linia 3, kol. 7): po 'x' oczekiwano '<-', '(', '.' lub '?.', napotkano '<'.
 ```
 
 ### Rodzaje typów
@@ -183,8 +187,8 @@ możliwe typy:
 - tekst -> string
 - logiczna -> bool
 - żółw -> ( mój żółw )
-- pozycja -> typ trzymający dwie liczby (liczba, liczba)
-- kolor -> typ pod wybieranie koloru
+- pozycja -> typ trzymający dwie liczby (liczba, liczba) "(x, y)"
+- kolor -> typ pod wybieranie koloru ( poprzez trzy składniowe r,g,b (0-255))
 - tablica -> array #dodatek_jak_bedzie_czas
 
 Powody dlaczego pod powierzchnią liczby będzie double:
@@ -228,9 +232,8 @@ np(x)
 |8|`-` (jednoargumentowy)|liczba|prawostronna|
 |9|`.metoda()` `?.metoda()`|wartość z metodami (żółw)|lewostronna|
 |10|nawiasy, literały, `x`, wywołania, `x[i]`|||
-|tutaj uwaga: nie będzie operatora `==` Jest to zmiana, którą uważam, za słuszną, ponieważ jest to mylące dla wielu programistów na samym początku ich kariery.||||
-|Tabela jest uporządkowana od najniższego do najwyższego priorytetu:||||
-|operator z wyższą pozycją wiąże mocniej.||||
+- tutaj uwaga: nie będzie operatora `==` Jest to zmiana, którą uważam, za słuszną, ponieważ jest to mylące dla wielu programistów na samym początku ich kariery.
+- Tabela jest uporządkowana od najniższego do najwyższego priorytetu: operator z wyższą pozycją wiąże mocniej.
 
 ### Priorytety i nawiasy
 
@@ -294,10 +297,12 @@ operator_porównania     = "=" | "<>" | "<" | ">" | "<=" | ">=" ;
 
 - Arność procedury użytkownika to liczba parametrów w nagłówku `oto`, arność funkcji wbudowanych pochodzi z rejestru. Oba rodzaje wywołuje się tak samo.
 - Procedura musi być zdefiniowana przed użyciem (rekurencja jest dozwolona).
-- Argument to wyrażenie arytmetyczne lub tekstowe (`suma`); wartość logiczną podajemy w nawiasach: f (:a = :b).
+- Argument to teraz dowolne wyrażenie, także logiczne f(a = b).
 - Liczby, teksty i wartości logiczne są przekazywane przez wartość, tablice przez referencję.
-- Jako instrukcja: zwrócona wartość jest odrzucana. W wyrażeniu: procedura musi zwrócić wartość przez `wy`.
+- Jako instrukcja: zwrócona wartość jest odrzucana. W wyrażeniu: procedura musi zwrócić wartość przez `wynik`.
 - Funkcje wbudowane (ruch żółwia, `pisz` itd.) są zwykłymi wywołaniami, gramatyka ich nie wyróżnia
+- Arność i nazwy sprawdzane w parserze dotyczną tylko wywołań procedur i funkcji ( `f(...)` ). Metody ( `x.m(...) `) sprawdza interpreter w czasie wykonania
+- 
 
 Przykładowe błędy:
 
@@ -366,7 +371,7 @@ Błąd wykonania (linia 3, kol. 5): składowa koloru musi być liczbą całkowit
 
 ### Wartość `brak`
 
-`brak` oznacza nieobecność wartości. Zwraca ją na przykład `GetŻółw`, gdy żółw nie istnieje, a procedura może ją zwrócić jawnie (`wynik brak`). To osobna wartość, a nie piąty typ.
+`brak` oznacza nieobecność wartości. Zwraca ją na przykład `GetŻółw`, gdy żółw nie istnieje, a procedura może ją zwrócić jawnie (`wynik brak`). To osobna wartość, a nie osobny typ.
 
 - `=` i `<>` porównują `brak` z wartością dowolnego typu (to jedyny wyjątek od reguły "dwa takie same typy"): `ż = brak` daje `prawda` tylko dla `brak`.
 - W pozostałych operacjach (`+`, `<`, `nie`, warunek `jeżeli` itd.) `brak` to błąd typu.
@@ -404,8 +409,8 @@ Składnia: `a?.metoda(argumenty)`. Jeśli `a` jest `brak`, całe wywołanie daje
 - Zwykła kropka na `brak` to błąd wykonania, a `?.` ten błąd zamienia na wynik `brak`.
 - Jeśli łańcuch ma więcej wywołań (`a?.f().g()`), to gdy `a` jest `brak`, pomijana jest cała reszta łańcucha. Wynikiem całości jest `brak`.
 - `?.` wolno użyć jako instrukcji: `felek?.np(10)` nie robi nic, gdy `felek` to `brak`.
-- `?.` dotyczy tylko wywołań metod. Nie ma wariantu dla `Run` ani dla indeksowania.
-- `?.` na wartości, która ma wartość, ale nie jest żółwiem (np. liczbie), to nadal błąd typu. Chroni tylko przed `brak`.
+- `?.` dotyczy tylko wywołań metod. Nie ma wariantu dla `Run`.
+- `?.` na wartości, która ma wartość, ale nie ma takiej metody (np. liczbie), to nadal błąd typu. Chroni tylko przed `brak`.
 
 ```
 start {
@@ -468,7 +473,7 @@ biały_znak              = " " | "\t" | "\n" | "\r" ;
 
 ## Żółwie
 
-Żółw to wartość jednego z czterech podstawowych typów. Każdy żółw ma nazwę (unikalną w całym programie), pozycję, kierunek, kolor i grubość pisaka, stan pisaka (opuszczony lub podniesiony) oraz widoczność. Wszystkie żółwie rysują na jednym wspólnym płótnie. Zawsze istnieje żółw domyślny `logi` (pozycja (0, 0), kierunek 0, czarny pisak opuszczony).
+Żółw to wartość jednego z podstawowych typów. Każdy żółw ma nazwę (unikalną w całym programie), pozycję, kierunek, kolor i grubość pisaka, stan pisaka (opuszczony lub podniesiony) oraz widoczność. Wszystkie żółwie rysują na jednym wspólnym płótnie. Zawsze istnieje żółw domyślny `logi` (pozycja (0, 0), kierunek 0, czarny pisak opuszczony).
 
 Żółwie są przekazywane przez referencję: po `b <- a` obie zmienne wskazują tego samego żółwia, a procedura, która dostaje żółwia w parametrze, porusza oryginał. Konwersji na typ żółw ani z niego nie ma.
 
@@ -496,7 +501,7 @@ start {
 Są trzy sposoby:
 
 1. **Bez wskazania żółwia.** Polecenie wykonuje żółw aktywny, a poza blokiem `Run` jest nim `logi`: `np(100)`.
-2. **Jako metoda.** Polecenie wykonuje wskazany żółw: `ala.np(100)`. Wskazać można zmienną, wywołanie lub element tablicy. Wariant `?.` opisuje sekcja "Brak, `??` i `?.`".
+2. **Jako metoda.** Polecenie wykonuje wskazany żółw: `ala.np(100)`. Wskazać można zmienną, wywołanie albo wynik metody (np. t.na(0).np(10)) . Wariant `?.` opisuje sekcja "Brak, `??` i `?.`".
 3. **W bloku `Run`.** Wszystkie polecenia bez wskazania żółwia w bloku wykonuje ten żółw:
 
 ```
@@ -616,12 +621,14 @@ zwracany jest błąd:
 - `spróbuj` i `złap` też nie tworzą zasięgu (patrz "Obsługa błędów w programie").
 
 ```
-limit <- 10
 oto f ()
 {
 	wynik limit
 }
-pisz $"{f}"
+start {
+    limit <- 10
+    pisz($"{f()}")
+}
 ```
 
 tutaj jest inny zasięg więc dostajemy błąd:
@@ -632,9 +639,9 @@ Błąd wykonania (linia 3, kol. 6): nieznana zmienna 'limit'.
 
 ## Białe znaki
 
-Spacje, tabulatory i nowe linie rozdzielają tokeny i poza tym nie mają znaczenia: poza tekstem w cudzysłowie i komentarzem są ignorowane. Instrukcje nie mają separatorów (ani średnika, ani końca linii jako końca instrukcji), więc `np 10 pw 90` i zapis w dwóch liniach znaczą to samo.
+Spacje, tabulatory i nowe linie rozdzielają tokeny i poza tym nie mają znaczenia: poza tekstem w cudzysłowie i komentarzem są ignorowane. Instrukcje nie mają separatorów (ani średnika, ani końca linii jako końca instrukcji), więc `np(10) pw(90)` i zapis w dwóch liniach znaczą to samo.
 
-Jedyny wyjątek: `$"`, `<-`, `<=`, `<>` oraz `:x` są pojedynczymi tokenami i nie mogą mieć spacji w środku. Dlatego `x<-10`, `x <-10` i `x<- 10` są przypisaniami, a `x < -10` porównaniem.
+Jedyny wyjątek: `$"`, `<-`, `<=`, `<>`, `??`, `?` są pojedynczymi tokenami i nie mogą mieć spacji w środku. Dlatego `x<-10`, `x <-10` i `x<- 10` są przypisaniami, a `x < -10` porównaniem.
 
 ## Konwertowanie typów
 
@@ -648,10 +655,11 @@ Jedyny wyjątek: `$"`, `<-`, `<=`, `<>` oraz `:x` są pojedynczymi tokenami i ni
 | tablica  | nie ma                 | nie ma                           | nie ma   | nie ma  | nie ma | –       |
 
 - Interpolacja jest jedyną konwersją na tekst. Liczba ma najkrótszy zapis odtwarzający wartość (`5`, `2.5`), wartość logiczna to `prawda` lub `fałsz`, tekst zostaje bez zmian.
-- `liczba "<tekst>"` przyjmuje opcjonalny minus, cyfry i opcjonalną część ułamkową (`"12"`, `"-3.5"`). Wszystko inne (`""`, `" 5"`, `"1e3"`, `"abc"`) to błąd wykonania.
+- `liczba("<tekst>")` przyjmuje opcjonalny minus, cyfry i opcjonalną część ułamkową (`"12"`, `"-3.5"`). Wszystko inne (`""`, `" 5"`, `"1e3"`, `"abc"`) to błąd wykonania.
 - Nie ma "prawdziwych" i "fałszywych" wartości: warunek musi być typu logiczna, `"5" + 1` to błąd typu, a `1 = "1"` to błąd typu (a nie `fałsz`).
 - Parametry procedur nie mają typów. Błąd typu pojawia się dopiero przy użyciu wartości.
 - Typy są sprawdzane w trakcie działania, więc błąd typu w nieobliczonym wyrażeniu (prawy operand `oraz` / `lub`, nieużyta gałąź `jeżeli`) nie jest zgłaszany.
+- Żółw nie ma żadnych konwersji.
 
 Dozwolone typy operandów:
 
@@ -674,7 +682,10 @@ Dozwolone typy operandów:
 | `pos(x, y)`                              | liczba, liczba                                                                                                                      | pozycja                                   | błąd typu                                             |
 | `Kolor(r, g, b)`                         | liczba 0-255, liczba 0-255, liczba 0-255                                                                                            | kolor                                     | zły typ: błąd typu, zła wartość: błąd wykonania       |
 | pozycja, kierunek i kolor w `żółw(...)`  | `pozycja`, liczba, `kolor`                                                                                                          | żółw                                      | błąd typu                                             |
-| `t[i]`                                   | `t`: tablica, `i`: liczba całkowita nieujemna                                                                                       | element                                   | zły typ: błąd typu, zła wartość: błąd wykonania       |
+| `t.na(i)`                                | `t`: tablica, `i`: liczba całkowita nieujemna                                                                                       | -                                         | zły typ: błąd typu, zła wartość: błąd wykonania       |
+| `t.ustaw(i, w)`                          | `t`: tablica, `i`: liczba całkowita nieujemna, `w`: dowolna wartość                                                                 | -                                         | zły typ: błąd typu, zła wartość: błąd wykonania       |
+| `t.dodaj(w)`                             | `t`: tablica, `w`: dowolna wartość                                                                                                  | element                                   | zły typ: błąd typu, zła wartość: błąd wykonania       |
+| `t.rozmiar()`                            | `t`: tablica,                                                                                                                       | liczba                                    | zły typ: błąd typu, zła wartość: błąd wykonania       |
 | `{ ... }` w interpolacji                 | liczba, tekst, logiczna, pozycja, kolor                                                                                             | tekst                                     | tablica, żółw, `brak`: błąd typu                      |
 | argumenty funkcji wbudowanych            | według tabel funkcji                                                                                                                | według tabel                              | błąd typu                                             |
 
@@ -773,7 +784,7 @@ start {
     spróbuj {
         spróbuj {
             t <- tablica(3)
-            t[10] <- 1                   # indeks poza zakresem #
+            t.ustaw(10, 1)                   # indeks poza zakresem #
         } złap (wewnętrzny) {
             pisz($"wewnętrzny błąd: {wewnętrzny}")
             ż <- GetŻółw("Nieistniejący")
@@ -789,24 +800,24 @@ Często lepiej nie wywoływać błędu, tylko go uniknąć przez `brak`, `?.` i 
 
 ## Słowa zastrzeżone i tokeny
 
-### Słowa kluczowe (12)
+### Słowa kluczowe (15)
 
 Wielkość liter ma znaczenie (`Jeżeli` to zwykły identyfikator). Słów kluczowych nie można użyć jako nazwy zmiennej, parametru ani procedury.
 
 ```
-słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" ;
+słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" | "rzuć";
 ```
 
 ### Nazwy funkcji wbudowanych (30)
 
-Nie można ich zdefiniować jako procedury (`oto np ...` to błąd składniowy). Mogą natomiast być nazwami zmiennych, bo zmienną zawsze zapisujemy jako `x` albo `x <-` (np. `liczba <- liczba "12"`).
+Nie można ich zdefiniować jako procedury (`oto np ...` to błąd składniowy). Mogą natomiast być nazwami zmiennych, bo zmienną zawsze zapisujemy jako `x` albo `x <-` (np. `liczba <- liczba("12")`).
 
 ```
 naprzód np prawo pw lewo lw idź_do ustaw_kierunek środek
 podnieś_pisak opuść_pisak kolor_pisaka kolor_wypełnienia grubość
 ukryj_żółwia pokaż_żółwia okrąg początek_wypełnienia koniec_wypełnienia
 poz_x poz_y kierunek usuń_żółwia wyczyść kolor_tła pisz liczba
-tablica rozmiar
+tablica rzuć
 żółw GetŻółw pos Kolor
 ```
 
@@ -844,6 +855,8 @@ Interpreter wykonuje drzewo rekurencyjnie na stosie wywołań, więc nieogranicz
 |zagnieżdżenie (nawiasy, bloki, interpolacje)|100|parser|składniowy|
 |głębokość wywołań procedur|1000|interpreter|wykonania|
 |rozmiar tablicy|1 000 000|interpreter|wykonania|
+
+funkcja `dodaj` tak samo będzie ograniczona przez limit wielkości tablicy.
 
 ```
 Błąd leksykalny (linia 1, kol. 1): identyfikator ma 70 znaków, limit wynosi 64.
@@ -1041,7 +1054,7 @@ flowchart TD
 |**Moduł**|**Wejście**|**Wyjście**|**Kluczowe mechanizmy**|
 |---|---|---|---|
 |**Lekser**|strumień znaków (`TextReader`)|`Token` (rodzaj, wartość, linia, kolumna)|• leniwa tokenizacja (czyta tylko tyle, ile potrzeba do jednego tokenu) <br>• natychmiastowa konwersja (`"2.5"` od razu staje się `double`, tekst bez ucieczek) <br>• limity długości literałów, identyfikatorów i tekstów <br>• tryb interpolacji (licznik otwartych interpolacji) <br>• zatrzymanie na pierwszym błędzie|
-|**Parser**|`ITokenSource`|drzewo obiektów programu (węzły instrukcji i wyrażeń)|• zejścia rekurencyjne: funkcje nazwane jak produkcje, nad każdą komentarz z linią EBNF <br>• węzły budowane od razu <br>• rejestr procedur (nazwa, arność) uzupełniany przy `oto` i z `IProcedureSignatures` <br>• kontrola nazw i arności w trakcie parsowania <br>• jeden token podglądu przy `<-` i `[` <br>• limit zagnieżdżenia, zatrzymanie na pierwszym błędzie <br>• węzły mają `Accept`, a wypisywanie drzewa (`--drzewo`) robi osobny `AstPrinter`|
+|**Parser**|`ITokenSource`|drzewo obiektów programu (węzły instrukcji i wyrażeń)|• zejścia rekurencyjne: funkcje nazwane jak produkcje, nad każdą komentarz z linią EBNF <br>• węzły budowane od razu <br>• rejestr procedur (nazwa, arność) uzupełniany przy `oto` i z `IProcedureSignatures` <br>• kontrola nazw i arności w trakcie parsowania <br>• gramatyka LL(1): o rodzaju instrukcji po identyfikatorze decyduje jeden token (<-, (, ., ?.), bez cofania <br>• limit zagnieżdżenia, zatrzymanie na pierwszym błędzie <br>• węzły mają `Accept`, a wypisywanie drzewa (`--drzewo`) robi osobny `AstPrinter`|
 |**Interpreter**|drzewo obiektów programu|zmiany stanu `World` (rysunek) i tekst do `TextWriter`|• zasięg globalny i lokalny (procedura widzi tylko swoje zmienne) <br>• jeden rejestr wywołań dla funkcji wbudowanych i procedur `oto` <br>• stos aktywnych żółwi (blok `Run`, domyślny `logi`) <br>• licznik głębokości wywołań i propagacja `wy` <br>• błędy typu i wykonania z pozycją z węzła drzewa|
 |**Cli**|argumenty wywołania i źródło programu|standardowe wyjście, wyjście błędów, plik SVG, kod wyjścia|• składanie potoku <br>• łapanie wszystkich wyjątków (nieoczekiwane jako błąd wewnętrzny) <br>• `SvgRenderer` i zrzut tekstowy rysunku (`--rysunek`)|
 
@@ -1072,7 +1085,6 @@ Oznaczenia przypadków (A, L, S, T, R) odnoszą się do pliku z przykładami (za
 |---|---|---|---|
 |Jednostkowe|Core|metody `Turtle`, `World`, `Canvas` bez interpretera, `TestRenderer` zapisuje wywołania|**[+]** ruch i skręty (kwadrat wraca do (0,0)), normalizacja kąta, wypełnienie (5 punktów), kolejność rysowania <br>**[-]** duplikat i brak żółwia, `EndFill` bez `BeginFill`, wielokąt z dwóch punktów|
 |Jednostkowe|Lekser|tekst na wejściu, porównanie ciągu tokenów (rodzaj, wartość, pozycja); osobny test dla każdego rodzaju tokenu i test leniwości (źródło nie jest czytane dalej, niż trzeba)|**[+]** ucieczki, interpolacja, liczby zmiennoprzecinkowe, komentarze wielolinijkowe, `<-` kontra `<`, `x<-10` w czterech zapisach, `<=` i `<>` <br>**[-]** niezamknięty tekst (L1), niezamknięty komentarz (L2), nieznany znak `@` (L3), zła ucieczka (L4), niezamknięta interpolacja (L5), limit 64 znaków (L6)|
-|Jednostkowe|Parser|wejście: ciągi tokenów; wynik: tekstowy zrzut drzewa (`AstPrinter`) porównywany ze wzorcem; sprawdzanie pozycji w błędach|**[+]** każda produkcja i każda alternatywa osobno, priorytety i łączność (`a lub b oraz c` kontra `(a lub b) oraz c`), `inaczej jeżeli`, zagnieżdżone `jeżeli` <br>**[-]** brak `{` (S1), procedura bez `już` (S6), nieznana procedura (S7), zła arność (S8), `<-` zamiast porównania (S11), nazwa wbudowana jako procedura (S15), `wy` poza procedurą (S16)|
 |Integracyjne|Lekser + parser|wejście: tekst; wynik: zrzut drzewa|**[+]** programy A1-A26 parsują się do oczekiwanych drzew <br>**[-]** błąd leksykalny zatrzymuje potok przed parserem (L1-L6)|
 |Jednostkowe|Interpreter|drzewo zbudowane z tekstu; wyjście `pisz` w buforze i rysunek w `TestRenderer`|**[+]** wyrażenia i priorytety (A8, A9), przekazywanie przez wartość (A12) i referencję (A13), zasięg zmiennych, `wy` z zagnieżdżonych pętli (A15) <br>**[-]** błędy typu (T1-T10) i wykonania (R1-R13) z dokładnym komunikatem i pozycją|
 |Odpornościowe|Interpreter|"złośliwy" kod z obniżonymi limitami (np. głębokość 10, żeby test był szybki)|**[+]** program z rekurencją na granicy limitu działa <br>**[-]** nieskończona rekurencja kończy się błędem wykonania, zanim wyczerpie się stos (R8, `StackOverflowException` w .NET nie da się złapać), procedura nie widzi zmiennej globalnej (R16), przepełnienie (R2), dzielenie przez zero (R1)|
@@ -1100,9 +1112,8 @@ Język powyżej jest przygotowany do implementacji tablic. Będą one obsługiwa
 |`tablica`|1|liczba n|nowa tablica o n elementach, każdy początkowo równy 0|
 |`rozmiar`|1|tablica|liczba elementów|
 
-Element tablicy: odczyt `t[i]` (wyrażenie), zapis `t[i] <- wartość` (instrukcja).
+Element tablicy: odczyt `t.na(i)` (wyrażenie), zapis `t.ustaw(i, w)` (instrukcja).
 
-- Indeks to dowolne wyrażenie, indeksy można łączyć (`m[1][2]`, `m[1][2] <- 5`).
 - Indeksy są od 0 do rozmiar-1 i muszą być nieujemnymi liczbami całkowitymi. Rozmiar ma limit (parametr, domyślnie 1 000 000).
 - Każdy element ma swój typ, więc w jednej tablicy mogą być liczby i teksty.
 - Tablice są przekazywane przez referencję: `b <- a` to druga nazwa tej samej tablicy.
@@ -1111,7 +1122,8 @@ Element tablicy: odczyt `t[i]` (wyrażenie), zapis `t[i] <- wartość` (instrukc
 ```
 Błąd wykonania (linia 5, kol. 3): nieznana zmienna 'mojTab'.
 Błąd typu (linia 5, kol. 9): 'x' nie jest tablicą, otrzymano liczba.
-Błąd składni (linia 4, kol. 1): odczyt elementu nie jest instrukcją. Czy chodziło o 'tab[0] <- ...' albo 'tab[0]' w wyrażeniu?
+Błąd typu (linia 4, kol. 5): tablica nie ma metody 'np'.
+Błąd wykonania (linia 6, kol. 8): indeks 10 poza zakresem (rozmiar 3).
 ```
 
 składnia tworzenia:
@@ -1124,17 +1136,19 @@ Przykład:
 
 ```
 mojTab <- tablica(10)
-mojTab[5] <-  1 # wstawiam 6-ty element na 1 ( szósty element bo liczymy od 0)#
+mojTab.ustaw(5, 1)   # szósty element, bo liczymy od 0 #
 ```
 
 ```
-mojaTablica <- tablica(5)
-i <- 0
-powtórz (rozmiar(mojaTablica), mojaTablica) {
-  mojaTablica[:i] <- :i * 10
-  i <- :i + 1
+start {
+    t <- tablica(5)
+    i <- 0
+    powtórz(t.rozmiar()) {
+        t.ustaw(i, i * 10)
+        i <- i + 1
+    }
+    pisz($"trzeci element: {t.na(2)}")    # trzeci element: 20 #
 }
-pisz $"trzeci element: {:mojaTablica[2]}"      # trzeci element: 20 #
 ```
 
-UWAGA: gdy tablice nie powstaną, usuwamy z gramatyki części `{ "[" , wyrażenie , "]" }`.
+UWAGA: gdy tablice nie powstaną, usuwamy funkcję tablica i metody tablicy z rejestru. Gramatyka nie wymaga zmian.

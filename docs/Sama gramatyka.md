@@ -67,7 +67,7 @@ komentarz               = "#" , { (* dowolny znak oprócz '#' *) } , "#" ;
 biały_znak              = " " | "\t" | "\n" | "\r" ;
 
 
-słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" ;
+słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" | "rzuć";
 ```
 
 
