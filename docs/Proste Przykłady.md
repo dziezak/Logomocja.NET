@@ -29,19 +29,19 @@ start {
 ### Podstawowe odwołanie
 ```
 start {
-    mojatablica[0] <- 10
-    x <- mojatablica[0] * 2
+    mojTab <- tablica(10)
+    mojTab.ustaw(5, 1)   # szósty element, bo liczymy od 0 # 
 }
 ```
 
 ### Maksimum i odwracanie
 ```
 oto maksimum(t, n) {
-    m <- t[0]
+    m <- t.na(0)
     i <- 1
     powtórz(n - 1) {
-        jeżeli (t[i] > m) {
-            m <- t[i]
+        jeżeli (t.na(i) > m) {
+            m <- t.na(i)
         }
         i <- i + 1
     }
@@ -51,9 +51,9 @@ oto maksimum(t, n) {
 oto odwróć(t, n) {
     i <- 0
     powtórz(n / 2) {
-        tmp <- t[i]
-        t[i] <- t[n - 1 - i]
-        t[n - 1 - i] <- tmp
+        tmp <- t.na(i)
+        t.na(i) <- t.na(n - 1 - i)
+        t.na(n - 1 - i) <- tmp
         i <- i + 1
     }
 }
@@ -62,7 +62,7 @@ start {
     t <- tablica(6)
     i <- 0
     powtórz(6) {
-        t[i] <- losuj(1, 100)
+        t.na(i) <- losuj(1, 100)
         i <- i + 1
     }
     pisz($"max = {maksimum(t, 6)}")
@@ -78,16 +78,16 @@ start {
     m <- tablica(n)
     i <- 0
     powtórz(n) {
-        m[i] <- tablica(n)
+        m.na(i) <- tablica(n)
         j <- 0
         powtórz(n) {
-            m[i][j] <- (i + 1) * (j + 1)
+            m.na(i).na(j) <- (i + 1) * (j + 1)
             j <- j + 1
         }
         i <- i + 1
     }
-    pisz($"m[2][3] = {m[2][3]}")
-    m[0][0] <- m[3][3] - m[1][1] * 2
+    pisz($"m.na(2).na(3) = {m.na(2).na(3)}")
+    m.na(0).na(0) <- m.na(3).na(3) - m.na(1).na(1) * 2
 }
 ```
 
@@ -352,7 +352,7 @@ start {
 # Problemy 
 ## Ujemny indeks
 ```
-x <- tablica[-1]
+x <- tablica.na(-1)
 ```
 
 ## Pusty argument w wywołaniu funkcji 
