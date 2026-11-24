@@ -41,24 +41,24 @@ lista_argumentów        = wyrażenie, { ",", wyrażenie } ;
 ```
 
 ```
-wyrażenie               = domyślna ;
-domyślna                = alternatywa, { "??", alternatywa } ;
-alternatywa             = koniunkcja, { "lub", koniunkcja } ;
-koniunkcja              = negacja, { "oraz", negacja } ;
-negacja                 = [ "nie" ], porównanie ;
-porównanie              = suma, [ operator_porównania, suma ] ;
-suma                    = iloczyn, { ( "+" | "-" ), iloczyn } ;
-iloczyn                 = jednoargumentowy, { ( "*" | "/" | "%" ), jednoargumentowy } ;
-jednoargumentowy        = [ "-" ], czynnik ;
+wyrażenie               = alternatywa ;
+alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
+koniunkcja              = negacja , { "oraz" , negacja } ;
+negacja                 = ["nie"], porównanie ;
+porównanie              = suma , [ operator_porównania , suma ] ;
+suma                    = iloczyn , { ( "+" | "-" ) , iloczyn } ;
+iloczyn                 = jednoargumentowy , { ( "*" | "/" | "%" ) , jednoargumentowy } ;
+jednoargumentowy        = ["-"] , domyślna ;
+domyślna                = czynnik, { "??", [ "-" ], czynnik } ;
 
-czynnik                 = podstawowy, { część_metody } ;
-część_metody            = ( "." | "?." ), identyfikator, argumenty ;
+czynnik                 = podstawowy, {część_metody};
+część_metody            = ("." | "?." ), identyfikator, argumenty ;
 podstawowy              = liczba
-                        | tekst
-                        | tekst_interpolowany
-                        | "prawda" | "fałsz" | "brak"
-                        | identyfikator, [ argumenty ]
-                        | "(", wyrażenie, ")" ;
+						| tekst
+						| tekst_interpolowany
+						| "prawda" | "fałsz" | "brak"
+						| identyfikator, [ argumenty ]
+						| "(" , wyrażenie , ")" ;
 
 operator_porównania     = "=" | "<>" | "<" | ">" | "<=" | ">=" ;
 ```

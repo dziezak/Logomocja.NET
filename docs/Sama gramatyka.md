@@ -31,15 +31,15 @@ argumenty               = "(", [ lista_argumentów ], ")" ;
 lista_argumentów        = wyrażenie , { "," , wyrażenie } ;
 
 
-wyrażenie               = domyślna ;
-domyślna                = alternatywa, { "??", alternatywa } ;
+wyrażenie               = alternatywa ;
 alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
 koniunkcja              = negacja , { "oraz" , negacja } ;
 negacja                 = ["nie"], porównanie ;
 porównanie              = suma , [ operator_porównania , suma ] ;
 suma                    = iloczyn , { ( "+" | "-" ) , iloczyn } ;
 iloczyn                 = jednoargumentowy , { ( "*" | "/" | "%" ) , jednoargumentowy } ;
-jednoargumentowy        = ["-"] , czynnik ;
+jednoargumentowy        = ["-"] , domyślna ;
+domyślna                = czynnik, { "??", [ "-" ], czynnik } ;
 
 czynnik                 = podstawowy, {część_metody};
 część_metody            = ("." | "?." ), identyfikator, argumenty ;
