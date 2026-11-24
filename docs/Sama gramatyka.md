@@ -10,6 +10,7 @@ instrukcja              = instrukcja_id
 						| instrukcja_warunkowa
 						| pętla_powtórz
 						| instrukcja_próby
+						| instrukcja_rzutu
 						| powrót;
 						
 instrukcja_id           = identyfikator, po_identyfikatorze ;
@@ -25,6 +26,7 @@ po_identyfikatorze      = "<-" , wyrażenie
 instrukcja_warunkowa    = "jeżeli" , "(" , wyrażenie, ")" , blok , [ "inaczej" , ( blok | instrukcja_warunkowa ) ] ;
 pętla_powtórz           = "powtórz" ,  "(" , wyrażenie, ")" , blok ;
 instrukcja_próby        = "spróbuj", blok, "złap", "(", identyfikator, ")", blok ;
+instrukcja_rzutu        = "rzut" , wyrażenie ;
 
 powrót                  = "wynik" , wyrażenie ;
 argumenty               = "(", [ lista_argumentów ], ")" ;

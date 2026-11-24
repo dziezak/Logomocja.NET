@@ -11,36 +11,37 @@ Parę decyzji projektowych:
 EBNF podstawa:
 
 ```
-program                 = { definicja_procedury }, główny_blok ;
-główny_blok             = "start", blok ;
-definicja_procedury     = "oto", identyfikator, "(", lista_parametrów, ")", blok ;
-lista_parametrów        = [ identyfikator, { ",", identyfikator } ] ;
+program                 = { definicja_procedury }, główny_blok;
+główny_blok             = "start", blok;
+definicja_procedury     = "oto" , identyfikator ,"(" , lista_parametrów ,")", blok;
+lista_parametrów        = [identyfikator , { ",", identyfikator } ] ;
 
-blok                    = "{", { instrukcja }, "}" ;
+blok                    = "{" , { instrukcja } , "}" ;
 instrukcja              = instrukcja_id
-                        | instrukcja_warunkowa
-                        | pętla_powtórz
-                        | instrukcja_próby
-                        | powrót ;
-
+						| instrukcja_warunkowa
+						| pętla_powtórz
+						| instrukcja_próby
+						| powrót;
+						
 instrukcja_id           = identyfikator, po_identyfikatorze ;
-po_identyfikatorze      = "<-", wyrażenie
+po_identyfikatorze      = "<-" , wyrażenie
                         | argumenty, [ łańcuch ]
-                        | łańcuch ;
+                        | łańcuch;
+
 łańcuch                 = "?.", identyfikator, argumenty, [ łańcuch ]
-                        | ".", ( "Run", "(", ")", blok
-                               | identyfikator, argumenty, [ łańcuch ] ) ;
+                        | ".", ("Run", "(", ")", blok
+                            | identyfikator, argumenty, [ łańcuch ] ) ;
 
-instrukcja_warunkowa    = "jeżeli", "(", wyrażenie, ")", blok,
-                          [ "inaczej", ( blok | instrukcja_warunkowa ) ] ;
-pętla_powtórz           = "powtórz", "(", wyrażenie, ")", blok ;
+
+instrukcja_warunkowa    = "jeżeli" , "(" , wyrażenie, ")" , blok , [ "inaczej" , ( blok | instrukcja_warunkowa ) ] ;
+pętla_powtórz           = "powtórz" ,  "(" , wyrażenie, ")" , blok ;
 instrukcja_próby        = "spróbuj", blok, "złap", "(", identyfikator, ")", blok ;
-powrót                  = "wynik", wyrażenie ;
-argumenty               = "(", [ lista_argumentów ], ")" ;
-lista_argumentów        = wyrażenie, { ",", wyrażenie } ;
-```
 
-```
+powrót                  = "wynik" , wyrażenie ;
+argumenty               = "(", [ lista_argumentów ], ")" ;
+lista_argumentów        = wyrażenie , { "," , wyrażenie } ;
+
+
 wyrażenie               = alternatywa ;
 alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
 koniunkcja              = negacja , { "oraz" , negacja } ;
@@ -61,6 +62,23 @@ podstawowy              = liczba
 						| "(" , wyrażenie , ")" ;
 
 operator_porównania     = "=" | "<>" | "<" | ">" | "<=" | ">=" ;
+
+
+litera                  = (* a-z, A-Z, ą ć ę ł ń ó ś ź ż oraz wielkie odpowiedniki *) ;
+cyfra                   = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+identyfikator           = litera , { litera | cyfra | "_" } ; (* poza słowami zastrzeżonymi *)
+liczba                  = cyfra , { cyfra } , [ "." , cyfra , { cyfra } ] ;
+znak_tekstu             = (* dowolny znak oprócz '"' i '\' *) ;
+znak_interpolowany      = (* dowolny znak oprócz '"', '\', '{' i '}' *) ;
+ucieczka                = "\" , ( '"' | "\" | "r" | "n" | "t" | "{" | "}" ) ;
+tekst                   = '"' , { znak_tekstu | ucieczka } , '"' ;
+tekst_interpolowany     = '$"' , { znak_interpolowany | ucieczka | "{" , wyrażenie , "}" } , '"' ;
+
+komentarz               = "#" , { (* dowolny znak oprócz '#' *) } , "#" ;
+biały_znak              = " " | "\t" | "\n" | "\r" ;
+
+
+słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" | "rzuć";
 ```
 
 ```
@@ -88,7 +106,7 @@ Uwaga do powtórz:
 powtórz ( <wyrażenie> ) { <instrukcje> }
 ```
 
-- Wyrażenie jest obliczane raz, przed pierwszym obiegiem (zmiana :n w ciele nie zmienia liczby obiegów).
+- Wyrażenie jest obliczane raz, przed pierwszym obiegiem (zmiana n w ciele nie zmienia liczby obiegów).
 - Wartość musi być liczbą całkowitą nieujemną. 0 oznacza brak obiegów.
 - `wynik` w ciele pętli kończy całą procedurę.
 
@@ -141,7 +159,7 @@ oto silnia (n)
 {
   jeżeli (n <= 1)
   {
-  	   wynik 1 
+    wynik 1 
   }
   wynik n * silnia(n - 1)
 }
@@ -222,16 +240,16 @@ np(x)
 
 |Poz.|Operatory|Operandy|Łączność|
 |---|---|---|---|
-|1|`??`|dowolne|lewostronna|
-|2|`lub`|logiczne|lewostronna|
-|3|`oraz`|logiczne|lewostronna|
-|4|`nie` (jednoargumentowy)|logiczna|prawostronna|
-|5|`=` `<>` `<` `>` `<=` `>=`|dwa takie same typy (`<` `>` `<=` `>=` tylko liczby i teksty; `=` i `<>` także z `brak`)|niełączne|
-|6|`+` `-`|liczby; `+` także tekst + tekst (konkatenacja)|lewostronna|
-|7|`*` `/` `%`|liczby|lewostronna|
-|8|`-` (jednoargumentowy)|liczba|prawostronna|
+|1|`lub`|logiczne|lewostronna|
+|2|`oraz`|logiczne|lewostronna|
+|3|`nie` (jednoargumentowy)|logiczna|prawostronna|
+|4|`=` `<>` `<` `>` `<=` `>=`|dwa takie same typy (`<` `>` `<=` `>=` tylko liczby i teksty; `=` i `<>` także z `brak`)|niełączne|
+|5|`+` `-`|liczby; `+` także tekst + tekst (konkatenacja)|lewostronna|
+|6|`*` `/` `%`|liczby|lewostronna|
+|7|`-` (jednoargumentowy)|liczba|prawostronna|
+|8|`??`|dowolne|lewostronna|
 |9|`.metoda()` `?.metoda()`|wartość z metodami (żółw)|lewostronna|
-|10|nawiasy, literały, `x`, wywołania, `x[i]`|||
+|10|nawiasy, literały, `x`, wywołania|||
 - tutaj uwaga: nie będzie operatora `==` Jest to zmiana, którą uważam, za słuszną, ponieważ jest to mylące dla wielu programistów na samym początku ich kariery.
 - Tabela jest uporządkowana od najniższego do najwyższego priorytetu: operator z wyższą pozycją wiąże mocniej.
 
@@ -267,30 +285,34 @@ Przykłady:
 |`nie a oraz b`|`(nie a) oraz b`|
 |`nie a = b`|`nie (a = b)`|
 |`(a lub b) oraz c`|nawiasy zmieniają kolejność|
+|`a ?? b + c`|	`(a ?? b) + c`|
+|`a + b ?? c`|	`a + (b ?? c)`|
+|`a ?? b = c`|`	(a ?? b) = c`|
+|`-a ?? b	`|`-(a ?? b)`|
+|`a ?? b ?? c`|	`(a ?? b) ?? c`|
+|`a?.f() ?? b`|	`(a?.f()) ?? b`|
 
 EBNF:
 
 ```
-wyrażenie               = domyślna ;
-domyślna                = alternatywa, { "??", alternatywa } ;
+wyrażenie               = alternatywa ;
 alternatywa             = koniunkcja , { "lub" , koniunkcja } ;
 koniunkcja              = negacja , { "oraz" , negacja } ;
 negacja                 = ["nie"], porównanie ;
 porównanie              = suma , [ operator_porównania , suma ] ;
 suma                    = iloczyn , { ( "+" | "-" ) , iloczyn } ;
 iloczyn                 = jednoargumentowy , { ( "*" | "/" | "%" ) , jednoargumentowy } ;
-jednoargumentowy        = ["-"] , czynnik ;
+jednoargumentowy        = ["-"] , domyślna ;
+domyślna                = czynnik, { "??", [ "-" ], czynnik } ;
 
 czynnik                 = podstawowy, {część_metody};
+część_metody            = ("." | "?." ), identyfikator, argumenty ;
 podstawowy              = liczba
 						| tekst
 						| tekst_interpolowany
 						| "prawda" | "fałsz" | "brak"
-						| dostęp_do_pamięci
-						| wywołanie
+						| identyfikator, [ argumenty ]
 						| "(" , wyrażenie , ")" ;
-
-wywołanie               = identyfikator , "(" , [ lista_argumentów ], ")";
 
 operator_porównania     = "=" | "<>" | "<" | ">" | "<=" | ">=" ;
 ```
@@ -381,10 +403,9 @@ Błąd wykonania (linia 3, kol. 5): składowa koloru musi być liczbą całkowit
 
 Składnia: `a ?? b`. Jeśli `a` nie jest `brak`, wynikiem jest `a`. W przeciwnym razie wynikiem jest `b`.
 
-- Ma najniższy priorytet, niższy niż `lub`, a łączy się lewostronnie: `a ?? b ?? c` to `(a ?? b) ?? c`, czyli pierwsza wartość różna od `brak`.
-- Jest obliczany leniwie: prawa strona jest obliczana tylko wtedy, gdy lewa jest `brak`.
-- Ponieważ obejmuje całe wyrażenia po obu stronach, porównanie wyniku trzeba ująć w nawiasy: `a ?? b = c` to `a ?? (b = c)`, a `(a ?? b) = c` jest tym, o co zwykle chodzi.
-- Po `??` może stać liczba ujemna: `podziel(10, 0) ?? -1`.
+- ?? ma wyższy priorytet niż operatory arytmetyczne, porównania i logiczne, a niższy niż . i ?.. Łączy się lewostronnie.
+- a ?? b = c to (a ?? b) = c, czyli porównuje wynik z wartością domyślną. Żeby wartością domyślną było całe wyrażenie, użyj nawiasów: a ?? (b + c).
+- Po prawej stronie można dać jeden minus (podziel(10, 0) ?? -1), ale -a ?? b to -(a ?? b).
 
 ```
 oto bezpieczna_pozycja(imię) {
@@ -396,7 +417,7 @@ start {
     nazwa_obcego <- GetŻółw("Bob")?.nazwa() ?? "nieznany"
     pisz(nazwa_obcego)                                     # nieznany #
 
-    jeżeli ((GetŻółw("Ala")?.pozycja() ?? pos(0, 0)) = pos(0, 0)) {
+    jeżeli (GetŻółw("Ala")?.pozycja() ?? pos(0, 0) = pos(0, 0)) {
         pisz("w punkcie startu")
     }
 }
@@ -696,10 +717,10 @@ Format komunikatu: `Błąd <rodzaj> (linia L, kol. K): opis`, a po nim opcjonaln
 |Rodzaj|Zgłasza|Co wykrywa|Co się dzieje|
 |---|---|---|---|
 |leksykalny|lekser|niezamknięty tekst lub komentarz, nieznany znak, zła sekwencja ucieczki, literał liczbowy ponad limit, identyfikator lub tekst ponad limit długości|zatrzymanie na pierwszym błędzie, bez uruchomienia|
-|składniowy|parser|zła struktura (brak `{`, `}`, `)`, ), `inaczej` bez `jeżeli`, `oto` w bloku, `wynik` poza procedurą, przekroczone zagnieżdżenie oraz kontrola nazw i arności: nieznana procedura, zła liczba argumentów, powtórzona definicja, nazwa wbudowana jako nazwa procedury|zatrzymanie na pierwszym błędzie, bez uruchomienia|
+|składniowy|parser|zła struktura (brak `{`, `}`, `)`, `)`, `inaczej` bez `jeżeli`, `oto` w bloku, `wynik` poza procedurą, przekroczone zagnieżdżenie oraz kontrola nazw i arności: nieznana procedura, zła liczba argumentów, powtórzona definicja, nazwa wbudowana jako nazwa procedury|zatrzymanie na pierwszym błędzie, bez uruchomienia|
 |typu|interpreter|operacja na wartości niewłaściwego typu|przerwanie programu w tym miejscu, chyba że w `spróbuj`|
 |wykonania|interpreter|dzielenie przez zero, przepełnienie, nieznana zmienna, indeks poza zakresem lub niecałkowity, procedura bez wartości, przekroczona głębokość wywołań, nieistniejący lub powtórzony żółw, kolor poza zakresem, tekst nie jest liczbą, zły rozmiar tablicy|przerwanie programu w tym miejscu, chyba że w `spróbuj`|
-|wejścia|uruchamiacz|brak pliku, brak uprawnień do odczytu|komunikat, bez uruchomienia|
+|wejścia|uruchamiacz|brak pliku, brak uprawnień do odczytu lub zapisu |komunikat, bez uruchomienia|
 |wewnętrzny|najwyższy poziom|nieoczekiwany wyjątek w interpreterze (błąd w naszym kodzie)|komunikat, to się nie powinno zdarzać|
 
 - Lekser i parser zatrzymują się na pierwszym błędzie. Kolejne błędy po pierwszym często są jego skutkiem, a dzięki temu implementacja jest prosta. Program jest najpierw w całości parsowany, więc przy błędzie leksykalnym lub składniowym nic się nie wykonuje.
@@ -800,7 +821,7 @@ Często lepiej nie wywoływać błędu, tylko go uniknąć przez `brak`, `?.` i 
 
 ## Słowa zastrzeżone i tokeny
 
-### Słowa kluczowe (15)
+### Słowa kluczowe (16)
 
 Wielkość liter ma znaczenie (`Jeżeli` to zwykły identyfikator). Słów kluczowych nie można użyć jako nazwy zmiennej, parametru ani procedury.
 
@@ -808,7 +829,7 @@ Wielkość liter ma znaczenie (`Jeżeli` to zwykły identyfikator). Słów klucz
 słowo_zastrzeżone = "start" | "oto" | "jeżeli" | "inaczej" | "powtórz" | "wynik" | "lub" | "oraz" | "nie" | "prawda" | "fałsz" |  "Run" | "brak" | "spróbuj" | "złap" | "rzuć";
 ```
 
-### Nazwy funkcji wbudowanych (30)
+### Nazwy funkcji wbudowanych 
 
 Nie można ich zdefiniować jako procedury (`oto np ...` to błąd składniowy). Mogą natomiast być nazwami zmiennych, bo zmienną zawsze zapisujemy jako `x` albo `x <-` (np. `liczba <- liczba("12")`).
 
@@ -826,12 +847,11 @@ tablica rzuć
 |Token|Przykłady|Wartość tokenu|
 |---|---|---|
 |IDENTYFIKATOR|`kwadrat`, `idź_do`|nazwa|
-|ZMIENNA|`x`|-|
 |LICZBA|`5`, `2.5`|liczba (`double`)|
 |TEKST|`"abc"`|tekst po rozwinięciu ucieczek|
 |tekst interpolowany|`$"x = {x}"`|ciąg tokenów (patrz niżej)|
 |słowa kluczowe|`oto`, `jeżeli`, ...|12 osobnych tokenów|
-|operatory|`+ - * / % = <> < > <= >= <-`|–|
+|operatory|`+ - * / % = <> < > <= >= <- ?? ?. `|–|
 |separatory|`( ) [ ] { }`|–|
 |KONIEC|koniec wejścia|–|
 |Komentarze lekser pomija i nie zwraca dla nich tokenu. Każdy token ma pozycję (linia, kolumna).|||
@@ -845,7 +865,7 @@ Tekst interpolowany lekser zwraca jako ciąg tokenów: początek (`$"`), częśc
 
 ## Limity i zabezpieczenia
 
-Interpreter wykonuje drzewo rekurencyjnie na stosie wywołań, więc nieograniczona rekurencja (np. `oto f() {f()} już`) zabiłaby cały proces. Dlatego głębokość jest ograniczona. Wszystkie limity są parametrami:
+Interpreter wykonuje drzewo rekurencyjnie na stosie wywołań, więc nieograniczona rekurencja (np. `oto f() {f()}`) zabiłaby cały proces. Dlatego głębokość jest ograniczona. Wszystkie limity są parametrami:
 
 |Parametr|Domyślnie|Zgłasza|Rodzaj błędu|
 |---|---|---|---|
@@ -955,7 +975,7 @@ wielokąt a [(0,0) (0,50) (50,50) (50,0) (0,0)] kolor=(255,0,0)
 |WF6|Operatory arytmetyczne, porównań i logiczne z priorytetami i łącznością, nawiasy, konkatenacja tekstów.|
 |WF7|Teksty z ucieczkami, nowymi liniami i interpolacją `$"..."`, komentarze `# ... #`.|
 |WF8|Instrukcja warunkowa z łańcuchem `inaczej jeżeli` i pętla `powtórz`.|
-|WF9|Definiowanie procedur z parametrami, zwracanie wartości przez `wy`, rekurencja, przekazywanie argumentów przez wartość.|
+|WF9|Definiowanie procedur z parametrami, zwracanie wartości przez `wynik`, rekurencja, przekazywanie argumentów przez wartość.|
 |WF10|Funkcje wbudowane obsługiwane tak samo jak procedury użytkownika (wspólny rejestr).|
 |WF11|Wiele żółwi na wspólnym płótnie: tworzenie, usuwanie, tworzenie (`żółw`, `GetŻółw`), metody żółwia, blok `Run` i domyślny żółw `logi`.|
 |WF12|Rysowanie: odcinki, okręgi, wypełnienia, kolor i grubość pisaka, pisak w górę i w dół, widoczność żółwia, kolor tła.|

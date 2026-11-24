@@ -52,8 +52,8 @@ oto odwróć(t, n) {
     i <- 0
     powtórz(n / 2) {
         tmp <- t.na(i)
-        t.na(i) <- t.na(n - 1 - i)
-        t.na(n - 1 - i) <- tmp
+        t.ustaw(i, t.na(n - 1 - i))
+        t.ustaw(n - 1 - i, tmp)
         i <- i + 1
     }
 }
@@ -62,7 +62,7 @@ start {
     t <- tablica(6)
     i <- 0
     powtórz(6) {
-        t.na(i) <- losuj(1, 100)
+        t.ustaw(i, losuj(1, 100))
         i <- i + 1
     }
     pisz($"max = {maksimum(t, 6)}")
@@ -78,16 +78,16 @@ start {
     m <- tablica(n)
     i <- 0
     powtórz(n) {
-        m.na(i) <- tablica(n)
+        m.ustaw(i, tablica(n))
         j <- 0
         powtórz(n) {
-            m.na(i).na(j) <- (i + 1) * (j + 1)
+            m.na(i).ustaw(j, (i + 1) * (j + 1))
             j <- j + 1
         }
         i <- i + 1
     }
     pisz($"m.na(2).na(3) = {m.na(2).na(3)}")
-    m.na(0).na(0) <- m.na(3).na(3) - m.na(1).na(1) * 2
+    m.na(0).ustaw(0, m.na(3).na(3) - m.na(1).na(1) * 2)
 }
 ```
 
@@ -151,17 +151,26 @@ start {
     jeżeli ((x > 1 lub y < 0) oraz nie (x = y)) { pw(90) }
     jeżeli (ż = brak) { pisz("brak żółwia") }
     jeżeli (ż?.nazwa() = "Ala") { pisz("to Ala") }
-    jeżeli ((ż?.pozycja() ?? pos(0, 0)) = pos(0, 0)) { pisz("w punkcie startu") }
+    
+    # Dzięki wyższemu priorytetowi ?? nie wymaga już zewnętrznych nawiasów przed = ani + #
+    jeżeli (ż?.pozycja() ?? pos(0, 0) = pos(0, 0)) { pisz("w punkcie startu") }
+    dystans <- ż?.x() ?? 0 + 10
+    
     jeżeli (nie prawda lub fałsz) { pisz("nigdy") }
 }
 ```
 ### Złożone zagnieżdżenie wywołań wewnątrz argumentów funkcji
 ```
-x <- losuj(mojatablica[dodaj(1, 2)], 100)
+start {
+    x <- losuj(mojatablica[dodaj(1, 2)], 100)
+}
 ```
 ### Złożone warunki logiczne z wywołaniem funkcji i negacją
 ```
-jeżeli (nie czy_gotowe() oraz x >= 0) { np(10) }
+start {
+    x <- 5
+    jeżeli (nie czy_gotowe() oraz x >= 0) { np(10) }
+}
 ```
 
 
@@ -348,6 +357,63 @@ start {
 | x <- 1 2                | Błąd                       |
 
 ---
+
+# Rzuć
+## Walidacja argumentów w procedurze
+```
+oto bezpieczny_wielokąt(boki, długość) {
+    jeżeli (boki < 3) {
+        rzuć "Wielokąt musi mieć co najmniej 3 boki!"
+    }
+    jeżeli (długość <= 0) {
+        rzuć $"Niepoprawna długość boku: {długość}"
+    }
+
+    powtórz(boki) {
+        np(długość)
+        pw(360 / boki)
+    }
+}
+
+```
+
+
+```
+start {
+    spróbuj {
+        bezpieczny_wielokąt(2, 50)
+    } złap (błąd) {
+        pisz($"Przechwycono: {błąd}")
+    }
+}
+```
+
+## Propagacja błędu i ponowne rzucenie (rzuć wewnątrz złap)
+
+```
+oto pobierz_element(t, indeks, rozmiar) {
+    jeżeli (indeks < 0 lub indeks >= rozmiar) {
+        rzuć $"Indeks {indeks} poza zakresem [0..{rozmiar - 1}]"
+    }
+    wynik t.na(indeks)
+}
+
+start {
+    t <- tablica(3)
+    t.ustaw(0, 10)
+
+    spróbuj {
+        spróbuj {
+            x <- pobierz_element(t, 5, 3)
+        } złap (e) {
+            pisz($"Log wewnętrzny: {e}")
+            rzuć $"Błąd krytyczny podczas odczytu: {e}"
+        }
+    } złap (główny_błąd) {
+        pisz(główny_błąd)
+    }
+}
+```
 
 # Problemy 
 ## Ujemny indeks
