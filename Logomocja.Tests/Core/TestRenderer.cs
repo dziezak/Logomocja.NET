@@ -1,7 +1,7 @@
 using Logomocja.Core;
 using Xunit;
 
-namespace Logomocja.Tests;
+namespace Logomocja.Tests.Core;
 
 public sealed class TestRenderer : IRenderer
 {

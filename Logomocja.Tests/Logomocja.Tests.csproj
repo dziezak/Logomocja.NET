@@ -20,6 +20,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Logomocja.Core\Logomocja.Core.csproj" />
+    <ProjectReference Include="..\Logomocja.Language\Logomocja.Language.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Acceptance\" />
+    <Folder Include="Language\Parser\" />
   </ItemGroup>
 
 </Project>

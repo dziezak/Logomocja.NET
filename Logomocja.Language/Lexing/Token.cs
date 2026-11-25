@@ -10,9 +10,9 @@ public sealed record Token(TokenType Type, object? Value, SourcePosition Positio
     {
         if (Value is null)
         {
-            return $"{Type} [{Value}] ({Position})";
+            return $"{Type} ({Position})";
         }
 
-        return $"{Type} ({Position})";
+        return $"{Type} [{Value}] ({Position})";
     }
 }

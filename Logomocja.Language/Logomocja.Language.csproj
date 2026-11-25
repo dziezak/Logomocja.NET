@@ -4,6 +4,10 @@
     <ProjectReference Include="..\Logomocja.Core\Logomocja.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Parser\" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

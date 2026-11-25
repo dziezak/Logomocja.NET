@@ -17,7 +17,15 @@ public sealed class SourceReader : IDisposable
 
     public bool IsAtEnd => _reader.Peek() == -1;
 
-    public int Peek() => _reader.Peek();
+    public int Peek()
+    {
+        int c = _reader.Peek();
+        if (c == '\r')
+        {
+            return '\n';
+        }
+        return c;
+    } 
 
     public int Read()
     {
@@ -34,6 +42,13 @@ public sealed class SourceReader : IDisposable
                 _reader.Read();
             }
 
+            _line++;
+            _column = 1;
+            return '\n';
+        }
+
+        if (current == '\n')
+        {
             _line++;
             _column = 1;
             return '\n';
